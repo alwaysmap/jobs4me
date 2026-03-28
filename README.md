@@ -1,0 +1,76 @@
+# Jobs For Me
+
+An AI-powered job search agent that runs on your Claude Pro or Max subscription. It learns what roles you'd actually take, finds them, assesses fit, and prepares you for interviews.
+
+## What It Does
+
+- **Searches for jobs on your behalf** — runs web searches across job boards and company career pages based on your target roles
+- **Assesses fit** — scores each role against your background with a structured recommendation (Strong / Moderate / Stretch / Pass)
+- **Learns from your decisions** — every decline updates the filter so the same kind of bad suggestion doesn't come back
+- **Prepares you for interviews** — generates company overviews and interview prep docs with your experience mapped to the role's requirements
+- **Tracks everything** — kanban board with your applications across stages (Suggested → Possible → Applied → Interviewing → Closed)
+
+## Quick Start
+
+1. Upload `jfm.zip` through the Cowork plugin settings (Customize → Personal plugins → +)
+2. Start a new Cowork session and select a folder for your job search data
+3. Type `/setup` and follow the guided conversation
+
+That's it. No dependencies to install, no API keys to configure — the plugin runs entirely on your Claude subscription inside Cowork's VM.
+
+The setup takes about 15 minutes. Claude will ask about your background, help you define the types of roles you're targeting, and set up your search sources. Then it runs a first search so you can calibrate by accepting or declining suggestions.
+
+## Commands
+
+| Command | What It Does |
+|---------|-------------|
+| `/setup` | Guided onboarding — profile, archetypes, sources, and first search |
+| `/search` | Run a search sweep right now |
+| `/assess <url>` | Assess a specific job posting against your profile |
+| `/update <company> - <status>` | Move a role through stages — interested, applied, interviewing, decline, etc. |
+| `/prep <company>` | Generate interview prep for a company |
+| `/board` | Regenerate and view your kanban board |
+| `/tweak` | Adjust anything — companies, sources, archetypes, evidence, preferences |
+
+Everything is adjustable after setup. Missed something? Run `/setup` again or `/tweak` to make targeted changes. Found a job posting on your own? Use `/assess` with the URL.
+
+## Automate It
+
+Set up a scheduled task so the agent searches for you automatically:
+
+1. Open the scheduled tasks menu (clock icon in the sidebar)
+2. Create a new task, name it something like "daily-search"
+3. Pick Jobsbyme → `/search` as the command
+4. Set your frequency — daily or twice a day works well
+
+New roles show up on your board without you lifting a finger. Review them when it's convenient, decline the bad ones, and the agent learns from every decision.
+
+## Your Data
+
+All your data lives as plain files in your selected folder:
+
+- `profile.yaml` — your background and preferences
+- `archetypes.yaml` — the role types you're targeting
+- `filters.yaml` — company include/exclude lists and decline patterns
+- `tracker.yaml` — all applications and their state
+- `Kanban/index.html` — kanban board (open in your browser, or serve with `tailscale serve`)
+- `briefs/` — search summaries
+- `active/` — saved job descriptions for active roles
+
+You can read and edit any of these files directly. They're plain YAML and markdown.
+
+**Back up your data** by keeping your job search folder in a synced location — Google Drive, Dropbox, or iCloud. Everything is plain files, so standard sync just works.
+
+## Requirements
+
+- Claude Desktop with Cowork mode (Pro or Max subscription)
+
+## How It Works
+
+The plugin teaches Claude how to be a job search agent through skills (domain knowledge) and commands (actions). When you run `/search`, Claude reads your profile, archetypes, and filters, searches the web for matching roles, assesses each one against your background, and adds the good ones to your tracker.
+
+Every time you decline a role with a reason, Claude checks if the reason represents a pattern and updates your filters. Over time, the agent gets better at predicting what you want.
+
+The kanban board is a self-contained HTML file generated from your tracker data. Open `Kanban/index.html` in any browser or serve the `Kanban/` directory with `tailscale serve` to see your current pipeline. The board includes links to saved JDs, company overviews, and interview prep docs when they exist.
+
+All mutations go through the same safe YAML handler with automatic backups and validation, so your data stays clean.

@@ -1,0 +1,14 @@
+node_modules/
+.DS_Store
+*.zip
+*.plugin
+
+# User data (never commit)
+tracker.yaml
+profile.yaml
+archetypes.yaml
+filters.yaml
+companies/
+briefs/
+Kanban/
+.backups/

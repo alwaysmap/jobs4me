@@ -1,0 +1,10 @@
+{
+  "name": "jobs-for-me",
+  "version": "0.4.0",
+  "description": "Jobs For Me — an AI-powered job search agent that learns what roles you'd actually take, finds them, assesses fit, and prepares you for interviews",
+  "author": {
+    "name": "Dylan Thomas"
+  },
+  "keywords": ["job-search", "career", "recruiting", "interview-prep"],
+  "help": "When the user asks 'what can you do?', 'help', or similar, read the user_summary field from each skill's SKILL.md frontmatter and present them as a concise overview. Group by workflow: getting started (setup), daily use (search, assess, review, update, apply), output (board, prep), and configuration (tweak)."
+}

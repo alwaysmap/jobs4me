@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Kanban board for tracking job applications, interviews, and offers">
+<meta name="application-name" content="Jobs For Me">
+<title>Job Search Board</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; padding-top: 56px; color: #333; }
+
+  /* Sticky header */
+  .site-header { position: fixed; top: 0; left: 0; right: 0; z-index: 50; background: #fff; border-bottom: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+  .header-inner { display: flex; align-items: center; gap: 12px; padding: 10px 20px; max-width: 100%; }
+  .site-title { font-size: 1rem; font-weight: 700; color: #1a1a2e; white-space: nowrap; }
+  .header-search { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  .view-select { padding: 5px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.8rem; color: #374151; background: #fff; cursor: pointer; }
+  .view-select:hover { border-color: #9ca3af; }
+  .header-actions { position: relative; display: flex; align-items: center; }
+  .hamburger-btn { background: none; border: 1px solid #d1d5db; color: #6b7280; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 1rem; line-height: 1; }
+  .hamburger-btn:hover { border-color: #9ca3af; color: #374151; }
+  .hamburger-menu { display: none; position: absolute; top: 100%; right: 0; margin-top: 6px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.12); min-width: 160px; z-index: 60; overflow: hidden; }
+  .hamburger-menu.open { display: block; }
+  .menu-item { display: block; width: 100%; text-align: left; padding: 10px 16px; background: none; border: none; font-size: 0.85rem; color: #374151; cursor: pointer; }
+  .menu-item:hover { background: #f1f5f9; }
+  .menu-item.active { color: #dc2626; background: #fef2f2; }
+  .btn-toggle { background: none; border: 1px solid #d1d5db; color: #6b7280; padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; }
+  .btn-toggle:hover { border-color: #9ca3af; color: #374151; }
+  .btn-toggle.active { background: #fee2e2; border-color: #fca5a5; color: #dc2626; }
+
+  body.privacy .privacy-blur { filter: blur(5px); user-select: none; }
+
+  .board { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 20px; align-items: flex-start; }
+  .column { background: #e8ecf1; border-radius: 10px; min-width: 180px; flex: 1; }
+  .column-header { padding: 12px 14px 8px; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none; }
+  .column-header:hover { opacity: 0.8; }
+  .column-header .count { background: rgba(0,0,0,0.12); border-radius: 10px; padding: 1px 8px; font-size: 0.75rem; font-weight: 500; }
+  .column-body { padding: 4px 8px 8px; min-height: 60px; }
+
+  .card { background: #fff; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border-left: 3px solid transparent; transition: box-shadow 0.15s; }
+  .card:hover { box-shadow: 0 3px 8px rgba(0,0,0,0.15); }
+  .card .company { font-weight: 600; font-size: 0.85rem; margin-bottom: 2px; }
+  .card .role { font-size: 0.75rem; color: #666; line-height: 1.3; }
+  .card .archetype-tag { font-size: 0.65rem; color: #7c3aed; background: #ede9fe; padding: 1px 6px; border-radius: 4px; display: inline-block; margin-top: 3px; }
+  .card .date { font-size: 0.7rem; color: #999; margin-top: 4px; }
+  .card .updated { font-size: 0.7rem; color: #888; margin-top: 3px; font-style: italic; }
+  .card .updated.stale { color: #d97706; font-weight: 600; font-style: normal; }
+  .card .notes { font-size: 0.7rem; color: #888; margin-top: 4px; line-height: 1.3; max-height: 2.6em; overflow: hidden; text-overflow: ellipsis; }
+  .card .decision-reason { font-size: 0.7rem; color: #16a34a; margin-top: 3px; font-style: italic; }
+  .card .decision-reason.declined { color: #dc2626; }
+  .card a { color: #2563eb; text-decoration: none; font-size: 0.7rem; }
+  .card a:hover { text-decoration: underline; }
+  .card .has-summary { font-size: 0.7rem; color: #2563eb; margin-top: 4px; }
+
+  /* Detail popup */
+  .detail-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 90; justify-content: center; align-items: flex-start; padding: 40px 16px; overflow-y: auto; }
+  .detail-overlay.visible { display: flex; }
+  .detail-popup { background: #fff; border-radius: 14px; padding: 20px; width: 100%; max-width: 480px; box-shadow: 0 12px 40px rgba(0,0,0,0.25); position: relative; margin: auto; }
+  .detail-popup .close-btn { position: absolute; top: 12px; right: 14px; background: none; border: none; font-size: 1.3rem; cursor: pointer; color: #999; line-height: 1; padding: 4px; }
+  .detail-popup .close-btn:hover { color: #333; }
+  .detail-popup .dp-company { font-weight: 700; font-size: 1.1rem; margin-bottom: 2px; padding-right: 30px; }
+  .detail-popup .dp-role { font-size: 0.9rem; color: #555; margin-bottom: 8px; }
+  .detail-popup .dp-meta { font-size: 0.8rem; color: #888; margin-bottom: 6px; }
+  .detail-popup .dp-meta a { color: #2563eb; text-decoration: none; }
+  .detail-popup .dp-meta a:hover { text-decoration: underline; }
+  .doc-link { background: none; border: none; color: #2563eb; cursor: pointer; font: inherit; font-size: 0.8rem; padding: 0; text-decoration: none; }
+  .doc-link:hover { text-decoration: underline; }
+  .detail-popup .dp-archetype { font-size: 0.75rem; color: #7c3aed; background: #ede9fe; padding: 2px 8px; border-radius: 4px; display: inline-block; margin-bottom: 10px; }
+  .detail-popup .dp-notes { font-size: 0.85rem; color: #555; margin-bottom: 10px; line-height: 1.4; }
+  .detail-popup .dp-decision { font-size: 0.85rem; font-style: italic; margin-bottom: 10px; }
+  .detail-popup .dp-decision.positive { color: #16a34a; }
+  .detail-popup .dp-decision.negative { color: #dc2626; }
+  .detail-popup .dp-summary { margin-top: 12px; padding: 12px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.85rem; line-height: 1.6; color: #334155; }
+  .detail-popup .dp-summary h4 { font-size: 0.85rem; font-weight: 600; margin: 8px 0 4px; color: #1e293b; }
+  .detail-popup .dp-summary h4:first-child { margin-top: 0; }
+  .detail-popup .dp-summary ul { margin: 3px 0 6px 18px; padding: 0; }
+  .detail-popup .dp-summary li { margin-bottom: 2px; }
+  .detail-popup .dp-summary p { margin: 4px 0; }
+  .detail-popup .dp-summary .fit-strong { color: #16a34a; font-weight: 600; }
+  .detail-popup .dp-summary .fit-moderate { color: #d97706; font-weight: 600; }
+  .detail-popup .dp-summary .fit-stretch { color: #dc2626; font-weight: 600; }
+  .detail-popup .dp-hint { margin-top: 14px; padding: 10px 12px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; font-size: 0.8rem; color: #0369a1; }
+
+  .col-suggested .column-header { color: #0891b2; }
+  .col-suggested .card { border-left-color: #0891b2; }
+  .col-maybe .column-header { color: #7c3aed; }
+  .col-maybe .card { border-left-color: #7c3aed; }
+  .col-applied .column-header { color: #2563eb; }
+  .col-applied .card { border-left-color: #2563eb; }
+  .col-interviewing .column-header { color: #d97706; }
+  .col-interviewing .card { border-left-color: #d97706; }
+  .col-rejected .column-header { color: #dc2626; }
+  .col-rejected .card { border-left-color: #dc2626; }
+  .col-closed .column-header { color: #6b7280; }
+  .col-closed .card { border-left-color: #6b7280; }
+  .col-declined .column-header { color: #9ca3af; }
+  .col-declined .card { border-left-color: #9ca3af; }
+
+  /* Declined grid view */
+  .board.declined-view { display: block; }
+  .board.declined-view .column { max-width: none; min-width: 0; flex: none; }
+  .board.declined-view .month-group { margin-bottom: 16px; }
+  .board.declined-view .month-label { font-size: 0.8rem; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.04em; padding: 6px 4px; border-bottom: 1px solid #d1d5db; margin-bottom: 8px; }
+  .board.declined-view .month-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  @media (max-width: 900px) { .board.declined-view .month-cards { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 500px) { .board.declined-view .month-cards { grid-template-columns: 1fr; } }
+
+  /* Collapsible columns */
+  .col-abbr { display: none; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.04em; writing-mode: vertical-rl; transform: rotate(180deg); }
+  .column.collapsed { flex: 0 0 44px; min-width: 44px; width: 44px; }
+  .column.collapsed .col-label { display: none; }
+  .column.collapsed .col-abbr { display: block; }
+  .column.collapsed .column-header { flex-direction: column; align-items: center; justify-content: flex-start; padding: 14px 4px; gap: 8px; }
+  .column.collapsed .column-header .count { transform: none; }
+  .column.collapsed .column-body { display: none; }
+
+  /* Settings flyout — reuses doc-overlay/doc-panel pattern */
+  .settings-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100; justify-content: flex-end; }
+  .settings-overlay.visible { display: flex; }
+  .settings-panel { background: #fff; width: 80%; max-width: 1100px; min-width: 340px; height: 100%; overflow-y: auto; box-shadow: -4px 0 20px rgba(0,0,0,0.2); padding: 24px 32px 40px; position: relative; animation: slideIn 0.2s ease-out; }
+  .config-section { background: #fff; border-radius: 10px; padding: 16px 20px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .config-section h3 { font-size: 0.85rem; font-weight: 700; color: #1a1a2e; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .config-section details summary { cursor: pointer; font-size: 0.78rem; color: #64748b; margin-bottom: 8px; }
+  .config-section details summary:hover { color: #334155; }
+  .config-section details[open] summary { margin-bottom: 10px; }
+  .config-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+  .config-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; }
+  .config-card .cc-title { font-weight: 600; font-size: 0.85rem; color: #334155; margin-bottom: 4px; }
+  .config-card .cc-detail { font-size: 0.78rem; color: #64748b; line-height: 1.4; }
+  .config-card .cc-detail .cc-label { color: #94a3b8; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.03em; }
+  .config-tag { display: inline-block; background: #e2e8f0; color: #475569; font-size: 0.72rem; padding: 2px 8px; border-radius: 4px; margin: 2px 2px 2px 0; }
+  .config-tag.source { background: #dbeafe; color: #1e40af; }
+  .config-tag.target { background: #dcfce7; color: #166534; }
+  .config-tag.watch { background: #fef9c3; color: #854d0e; }
+  .config-tag.skip { background: #fee2e2; color: #991b1b; }
+  .config-tag.decline { background: #fce7f3; color: #9d174d; }
+  .config-tag.archetype { background: #ede9fe; color: #5b21b6; }
+  .config-empty { font-size: 0.78rem; color: #94a3b8; font-style: italic; }
+  .config-row { display: flex; gap: 16px; margin-bottom: 16px; }
+  .config-row > .config-section { flex: 1; margin-bottom: 0; }
+  @media (max-width: 700px) { .config-row { flex-direction: column; } }
+
+  /* Document viewer flyout */
+  .doc-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100; justify-content: flex-end; }
+  .doc-overlay.visible { display: flex; }
+  .doc-panel { background: #fff; width: 56%; max-width: 720px; min-width: 340px; height: 100%; overflow-y: auto; box-shadow: -4px 0 20px rgba(0,0,0,0.2); padding: 24px 32px 40px; position: relative; animation: slideIn 0.2s ease-out; }
+  @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+  .doc-panel .doc-header, .settings-panel .doc-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #e2e8f0; }
+  .doc-panel .doc-title, .settings-panel .doc-title { font-size: 0.85rem; font-weight: 600; color: #64748b; }
+  .doc-panel .doc-close, .settings-panel .doc-close { background: none; border: 1px solid #d1d5db; color: #6b7280; padding: 4px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; }
+  .doc-panel .doc-close:hover, .settings-panel .doc-close:hover { border-color: #9ca3af; color: #374151; }
+  .doc-body { font-size: 0.9rem; line-height: 1.7; color: #1e293b; }
+  .doc-body h1 { font-size: 1.4rem; margin: 24px 0 12px; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; }
+  .doc-body h2 { font-size: 1.15rem; margin: 20px 0 8px; color: #1e293b; }
+  .doc-body h3 { font-size: 1rem; margin: 16px 0 6px; color: #334155; }
+  .doc-body h4 { font-size: 0.9rem; margin: 12px 0 4px; color: #475569; }
+  .doc-body p { margin: 8px 0; }
+  .doc-body ul, .doc-body ol { margin: 8px 0 8px 24px; }
+  .doc-body li { margin-bottom: 4px; }
+  .doc-body code { background: #f1f5f9; padding: 1px 5px; border-radius: 3px; font-size: 0.85em; color: #be185d; }
+  .doc-body pre { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px 16px; overflow-x: auto; margin: 12px 0; }
+  .doc-body pre code { background: none; padding: 0; color: #334155; }
+  .doc-body blockquote { border-left: 3px solid #cbd5e1; padding-left: 14px; color: #64748b; margin: 12px 0; }
+  .doc-body a { color: #2563eb; text-decoration: none; }
+  .doc-body a:hover { text-decoration: underline; }
+  .doc-body table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 0.85rem; }
+  .doc-body th, .doc-body td { border: 1px solid #e2e8f0; padding: 6px 10px; text-align: left; }
+  .doc-body th { background: #f8fafc; font-weight: 600; }
+  .doc-body hr { border: none; border-top: 1px solid #e2e8f0; margin: 20px 0; }
+
+  /* Briefs list */
+  .briefs-item { padding: 10px 14px; border-bottom: 1px solid #e2e8f0; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+  .briefs-item:hover { background: #f1f5f9; }
+  .briefs-item .brief-date { font-weight: 600; font-size: 0.9rem; color: #1e293b; }
+  .briefs-item .brief-arrow { color: #94a3b8; font-size: 0.9rem; }
+  .briefs-back { background: none; border: none; color: #2563eb; cursor: pointer; font-size: 0.82rem; padding: 0; margin-bottom: 12px; display: none; }
+  .briefs-back:hover { text-decoration: underline; }
+  .briefs-empty { font-size: 0.85rem; color: #94a3b8; font-style: italic; padding: 20px 0; }
+
+  /* Mobile */
+  @media (max-width: 640px) {
+    .header-search input { width: 120px !important; }
+    .doc-panel { width: 90%; min-width: 0; padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <span class="site-title">Job Search</span>
+    <div class="header-search">
+      <input id="search-input" type="search" placeholder="Search roles…"
+        oninput="searchQuery = this.value.trim().toLowerCase(); render();"
+        style="padding:5px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:0.85rem; width:220px; background:#fff; color:#111;">
+      <select id="view-select" class="view-select" onchange="setViewFilter(this.value)">
+        <option value="active">Active</option>
+        <option value="declined">Declined</option>
+        <option value="all">All</option>
+      </select>
+    </div>
+    <div class="header-actions">
+      <button class="hamburger-btn" id="hamburger-btn" onclick="toggleMenu()" aria-label="Menu">&#9776;</button>
+      <div class="hamburger-menu" id="hamburger-menu">
+        <button class="menu-item" id="briefs-menu-item" onclick="toggleMenu(); toggleBriefsPanel();">Briefs</button>
+        <button class="menu-item" onclick="toggleMenu(); openSettings();">Settings</button>
+        <button class="menu-item" id="privacy-menu-item" onclick="toggleMenu(); togglePrivacy();">Privacy</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="board" id="board"></div>
+
+<!-- Settings flyout -->
+<div class="settings-overlay" id="settings-overlay">
+  <div class="settings-panel">
+    <div class="doc-header">
+      <span class="doc-title">Settings</span>
+      <button class="doc-close" onclick="closeSettings()">Close</button>
+    </div>
+    <div id="settings-panel"></div>
+  </div>
+</div>
+
+<!-- Detail popup -->
+<div class="detail-overlay" id="detail-overlay">
+  <div class="detail-popup" id="detail-popup">
+    <button class="close-btn" onclick="closeDetail()">&times;</button>
+    <div id="detail-content"></div>
+  </div>
+</div>
+
+<!-- Document viewer flyout -->
+<div class="doc-overlay" id="doc-overlay">
+  <div class="doc-panel">
+    <div class="doc-header">
+      <span class="doc-title" id="doc-title"></span>
+      <button class="doc-close" onclick="closeDoc()">Close</button>
+    </div>
+    <div class="doc-body" id="doc-body"></div>
+  </div>
+</div>
+
+<!-- Briefs flyout -->
+<div class="doc-overlay" id="briefs-overlay">
+  <div class="doc-panel">
+    <div class="doc-header">
+      <span class="doc-title" id="briefs-title">Search Briefs</span>
+      <button class="doc-close" onclick="closeBriefs()">Close</button>
+    </div>
+    <div id="briefs-list"></div>
+    <div class="doc-body" id="briefs-body" style="display:none;"></div>
+  </div>
+</div>
+
+<script id="tracker-data" type="application/json">__TRACKER_DATA__</script>
+<script id="config-data" type="application/json">__CONFIG_DATA__</script>
+<script id="document-data" type="application/json">__DOCUMENT_DATA__</script>
+<script id="briefs-data" type="application/json">__BRIEFS_DATA__</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.1/marked.min.js"></script>
+<script>
+// Data injected by the board generator — do not edit manually
+const applications = JSON.parse(document.getElementById('tracker-data').textContent);
+
+const VISIBLE_STAGES = ['suggested', 'maybe', 'applied', 'interviewing', 'rejected', 'closed'];
+
+// Briefs
+const briefsRaw = document.getElementById('briefs-data').textContent.trim();
+const briefs = briefsRaw && briefsRaw !== '__BRIEFS_DATA__' ? JSON.parse(briefsRaw) : [];
+const ARCHETYPE_LABELS = {
+  tpm_leadership: 'TPM Leadership',
+  professional_services: 'Professional Services',
+  partner_engineering: 'Partner Engineering',
+  startup_operations: 'Startup Operations'
+};
+
+let viewFilter = 'active'; // 'active' | 'declined' | 'all'
+const collapsedStages = new Set(['rejected', 'closed']);
+const userExpanded = new Set();
+let searchQuery = '';
+
+function setViewFilter(value) {
+  viewFilter = value;
+  document.getElementById('view-select').value = value;
+  render();
+}
+
+// Hamburger menu
+function toggleMenu() {
+  document.getElementById('hamburger-menu').classList.toggle('open');
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('.header-actions')) {
+    document.getElementById('hamburger-menu').classList.remove('open');
+  }
+});
+
+function togglePrivacy() {
+  document.body.classList.toggle('privacy');
+  document.getElementById('privacy-menu-item').classList.toggle('active', document.body.classList.contains('privacy'));
+}
+
+function toggleCollapse(stage) {
+  // If currently collapsed (either by default or by user), expand it.
+  // If currently expanded, collapse it. Simple toggle.
+  const isCurrentlyCollapsed = collapsedStages.has(stage) || (!userExpanded.has(stage) && isAutoCollapsed(stage));
+  if (isCurrentlyCollapsed) {
+    collapsedStages.delete(stage);
+    userExpanded.add(stage);
+  } else {
+    userExpanded.delete(stage);
+    collapsedStages.add(stage);
+  }
+  render();
+}
+
+function isAutoCollapsed(stage) {
+  return applications.filter(a => a.stage === stage).length === 0;
+}
+
+function renderSummaryHtml(md) {
+  if (!md) return '';
+  const lines = md.split('\n');
+  let html = '';
+  let inList = false;
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) { if (inList) { html += '</ul>'; inList = false; } continue; }
+    if (trimmed.startsWith('### ') || trimmed.startsWith('## ')) {
+      if (inList) { html += '</ul>'; inList = false; }
+      const text = trimmed.replace(/^#{2,3}\s/, '');
+      html += `<h4>${inlineMd(text)}</h4>`;
+      continue;
+    }
+    if (trimmed.startsWith('- ')) {
+      if (!inList) { html += '<ul>'; inList = true; }
+      html += `<li>${inlineMd(trimmed.slice(2))}</li>`;
+      continue;
+    }
+    if (inList) { html += '</ul>'; inList = false; }
+    html += `<p>${inlineMd(trimmed)}</p>`;
+  }
+  if (inList) html += '</ul>';
+  return html;
+}
+
+function inlineMd(text) {
+  text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+  text = text.replace(/\bStrong\b/g, '<span class="fit-strong">Strong</span>');
+  text = text.replace(/\bModerate\b/g, '<span class="fit-moderate">Moderate</span>');
+  text = text.replace(/\bStretch\b/g, '<span class="fit-stretch">Stretch</span>');
+  return text;
+}
+
+function openDetail(app) {
+  const overlay = document.getElementById('detail-overlay');
+  const content = document.getElementById('detail-content');
+  const urlHtml = app.url ? `<a href="${app.url}" target="_blank">Job posting</a>` : '';
+  const appId = app.id;
+  const docsLinks = [];
+  if (app.has_jd) docsLinks.push(`<button class="doc-link" onclick="openDoc('${esc(appId)}','jd','${esc(app.company)}')">JD</button>`);
+  if (app.has_overview) docsLinks.push(`<button class="doc-link" onclick="openDoc('${esc(appId)}','overview','${esc(app.company)}')">Company overview</button>`);
+  if (app.has_prep) docsLinks.push(`<button class="doc-link" onclick="openDoc('${esc(appId)}','prep','${esc(app.company)}')">Interview prep</button>`);
+  const links = [urlHtml, ...docsLinks].filter(Boolean).join(' &middot; ');
+  const archetypeHtml = app.archetype && ARCHETYPE_LABELS[app.archetype]
+    ? `<div class="dp-archetype">${ARCHETYPE_LABELS[app.archetype]}</div>` : '';
+  let updatedHtml = '';
+  if (app.last_updated) {
+    const days = Math.floor((Date.now() - new Date(app.last_updated + 'T00:00:00')) / 86400000);
+    const ago = days === 0 ? 'today' : days === 1 ? 'yesterday' : `${days}d ago`;
+    updatedHtml = `<div class="dp-meta">Updated ${ago} (${app.last_updated})</div>`;
+  }
+  const notesHtml = app.notes ? `<div class="dp-notes">${app.notes}</div>` : '';
+  let decisionHtml = '';
+  if (app.decision && app.decision.reason) {
+    const cls = app.decision.proceed === 'yes' ? 'positive' : 'negative';
+    decisionHtml = `<div class="dp-decision ${cls}">&ldquo;${app.decision.reason}&rdquo;</div>`;
+  }
+  const summaryHtml = app.agent_summary
+    ? `<div class="dp-summary">${renderSummaryHtml(app.agent_summary)}</div>` : '';
+
+  const hintHtml = app.stage === 'suggested'
+    ? `<div class="dp-hint">To act on this role, tell Claude: <strong>/update ${app.company} - interested</strong> or <strong>/update ${app.company} - decline reason</strong></div>`
+    : '';
+
+  content.innerHTML = `
+    <div class="dp-company privacy-blur">${app.company}</div>
+    <div class="dp-role privacy-blur">${app.role || 'Role TBD'}</div>
+    ${archetypeHtml}
+    ${updatedHtml}
+    ${links ? `<div class="dp-meta privacy-blur">${links}</div>` : ''}
+    ${decisionHtml}
+    ${notesHtml}
+    ${summaryHtml}
+    ${hintHtml}
+  `;
+  overlay.classList.add('visible');
+}
+
+function closeDetail() {
+  document.getElementById('detail-overlay').classList.remove('visible');
+}
+
+document.getElementById('detail-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('detail-overlay')) closeDetail();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.getElementById('settings-overlay').classList.contains('visible')) { closeSettings(); return; }
+  if (e.key === 'Escape' && document.getElementById('briefs-overlay').classList.contains('visible')) { closeBriefs(); return; }
+  if (e.key === 'Escape' && document.getElementById('doc-overlay').classList.contains('visible')) { closeDoc(); return; }
+  if (e.key === 'Escape' && document.getElementById('detail-overlay').classList.contains('visible')) closeDetail();
+  if (e.key === '/' && !e.target.matches('input, textarea')) {
+    e.preventDefault();
+    document.getElementById('search-input').focus();
+  }
+});
+
+function render() {
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+  const stagesToRender = viewFilter === 'declined' ? ['declined']
+    : viewFilter === 'all' ? [...VISIBLE_STAGES, 'declined'] : VISIBLE_STAGES;
+  board.classList.toggle('declined-view', viewFilter === 'declined');
+
+  stagesToRender.forEach(stage => {
+    const col = document.createElement('div');
+    col.className = `column col-${stage}`;
+    const cards = applications.filter(a => a.stage === stage);
+    const label = stage === 'closed' ? 'closed / unknown' : stage;
+    const abbr = stage === 'closed' ? 'CLO' : stage.slice(0, 3).toUpperCase();
+    const autoCollapse = cards.length === 0 || collapsedStages.has(stage);
+    const isCollapsed = autoCollapse && !userExpanded.has(stage);
+    if (isCollapsed) col.classList.add('collapsed');
+
+    const visibleCount = searchQuery
+      ? cards.filter(a =>
+          (a.company || '').toLowerCase().includes(searchQuery) ||
+          (a.role || '').toLowerCase().includes(searchQuery)
+        ).length
+      : cards.length;
+
+    col.innerHTML = `
+      <div class="column-header" title="Click to ${isCollapsed ? 'expand' : 'collapse'}">
+        <span class="col-label">${label}</span>
+        <span class="col-abbr">${abbr}</span>
+        <span class="count">${visibleCount}</span>
+      </div>
+      <div class="column-body" data-stage="${stage}"></div>
+    `;
+    col.querySelector('.column-header').addEventListener('click', () => toggleCollapse(stage));
+    const body = col.querySelector('.column-body');
+
+    if (viewFilter === 'declined' && stage === 'declined') {
+      const groups = new Map();
+      cards.forEach(app => {
+        const d = app.last_updated || (app.dates && app.dates.declined) || (app.dates && app.dates.suggested) || '';
+        const key = d ? d.slice(0, 7) : '0000-00';
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(app);
+      });
+      const sortedKeys = [...groups.keys()].sort((a, b) => b.localeCompare(a));
+      sortedKeys.forEach(key => {
+        groups.get(key).sort((a, b) => (a.company || '').localeCompare(b.company || ''));
+        const [y, m] = key.split('-');
+        const label = key === '0000-00' ? 'Unknown' : new Date(+y, +m - 1).toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+        const groupEl = document.createElement('div');
+        groupEl.className = 'month-group';
+        groupEl.innerHTML = `<div class="month-label">${label}</div><div class="month-cards"></div>`;
+        const cardsContainer = groupEl.querySelector('.month-cards');
+        groups.get(key).forEach(app => cardsContainer.appendChild(buildCard(app)));
+        body.appendChild(groupEl);
+      });
+    } else {
+      cards.sort((a, b) => {
+        const dateA = a.last_updated || (a.dates && a.dates.applied) || (a.dates && a.dates.identified) || (a.dates && a.dates.suggested) || '';
+        const dateB = b.last_updated || (b.dates && b.dates.applied) || (b.dates && b.dates.identified) || (b.dates && b.dates.suggested) || '';
+        return dateB.localeCompare(dateA);
+      });
+      cards.forEach(app => body.appendChild(buildCard(app)));
+    }
+    board.appendChild(col);
+  });
+}
+
+function buildCard(app) {
+  const card = document.createElement('div');
+  card.className = 'card';
+
+  const urlHtml = app.url ? `<a href="${app.url}" target="_blank">Job posting</a>` : '';
+  const linksHtml = [urlHtml].filter(Boolean).join(' &middot; ');
+  const archetypeHtml = app.archetype && ARCHETYPE_LABELS[app.archetype]
+    ? `<span class="archetype-tag privacy-blur">${ARCHETYPE_LABELS[app.archetype]}</span>` : '';
+
+  let updatedHtml = '';
+  if (app.last_updated) {
+    const days = Math.floor((Date.now() - new Date(app.last_updated + 'T00:00:00')) / 86400000);
+    const stale = days > 14 && !['closed', 'rejected', 'declined'].includes(app.stage);
+    const ago = days === 0 ? 'today' : days === 1 ? 'yesterday' : `${days}d ago`;
+    updatedHtml = `<div class="updated${stale ? ' stale' : ''} privacy-blur">updated ${ago}</div>`;
+  }
+
+  let decisionHtml = '';
+  if (app.decision && app.decision.reason) {
+    const cls = app.decision.proceed === 'yes' ? '' : ' declined';
+    decisionHtml = `<div class="decision-reason${cls} privacy-blur">&ldquo;${app.decision.reason}&rdquo;</div>`;
+  }
+
+  const summaryHint = app.agent_summary ? '<div class="has-summary privacy-blur">Click for details</div>' : '';
+
+  card.innerHTML = `
+    <div class="company privacy-blur">${app.company}</div>
+    <div class="role privacy-blur">${app.role || 'Role TBD'}</div>
+    ${archetypeHtml}
+    ${updatedHtml}
+    ${linksHtml ? `<div class="date privacy-blur">${linksHtml}</div>` : ''}
+    ${decisionHtml}
+    ${summaryHint}
+  `;
+
+  card.addEventListener('click', e => {
+    if (e.target.closest('a')) return;
+    openDetail(app);
+  });
+
+  if (searchQuery) {
+    const matches =
+      (app.company || '').toLowerCase().includes(searchQuery) ||
+      (app.role || '').toLowerCase().includes(searchQuery);
+    if (!matches) card.style.display = 'none';
+  }
+  return card;
+}
+
+// Document data — markdown contents embedded at build time
+const docRaw = document.getElementById('document-data').textContent.trim();
+const documents = docRaw && docRaw !== '__DOCUMENT_DATA__' ? JSON.parse(docRaw) : {};
+
+function openDoc(appId, type, company) {
+  const key = `${appId}::${type}`;
+  const md = documents[key];
+  if (!md) return;
+  const labels = { jd: 'Job Description', overview: 'Company Overview', prep: 'Interview Prep' };
+  document.getElementById('doc-title').textContent = `${company || appId} — ${labels[type] || type}`;
+  document.getElementById('doc-body').innerHTML = marked.parse(md);
+  document.getElementById('doc-overlay').classList.add('visible');
+  // Close detail popup if open so they don't stack
+  closeDetail();
+}
+
+function closeDoc() {
+  document.getElementById('doc-overlay').classList.remove('visible');
+}
+
+document.getElementById('doc-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('doc-overlay')) closeDoc();
+});
+
+// Config panel
+const configRaw = document.getElementById('config-data').textContent.trim();
+const config = configRaw && configRaw !== '__CONFIG_DATA__' ? JSON.parse(configRaw) : null;
+function openSettings() {
+  renderConfig();
+  document.getElementById('settings-overlay').classList.add('visible');
+}
+
+function closeSettings() {
+  document.getElementById('settings-overlay').classList.remove('visible');
+}
+
+document.getElementById('settings-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('settings-overlay')) closeSettings();
+});
+
+function tags(items, cls) {
+  if (!items || items.length === 0) return '<span class="config-empty">None yet</span>';
+  return items.map(i => `<span class="config-tag ${cls}">${esc(typeof i === 'string' ? i : i.name || i.title || JSON.stringify(i))}</span>`).join('');
+}
+
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function renderConfig() {
+  if (!config) {
+    document.getElementById('settings-panel').innerHTML = '<div class="config-section"><p class="config-empty">No config data available. Run <code>/setup</code> to get started.</p></div>';
+    return;
+  }
+  const panel = document.getElementById('settings-panel');
+  let html = '';
+  const pb = 'privacy-blur';
+
+  // Archetypes (collapsible)
+  if (config.archetypes && config.archetypes.length > 0) {
+    html += `<div class="config-section"><h3>Role Archetypes</h3><details><summary>${config.archetypes.length} archetype${config.archetypes.length === 1 ? '' : 's'} configured</summary><div class="config-grid ${pb}">`;
+    config.archetypes.forEach(a => {
+      const titles = (a.titles || []).map(t => `<span class="config-tag archetype">${esc(t)}</span>`).join('');
+      const keywords = (a.keywords || []).map(k => `<span class="config-tag">${esc(k)}</span>`).join('');
+      html += `<div class="config-card">
+        <div class="cc-title">${esc(a.name || a.key || 'Unnamed')}</div>
+        ${titles ? `<div class="cc-detail" style="margin-bottom:4px"><span class="cc-label">Titles</span><br>${titles}</div>` : ''}
+        ${keywords ? `<div class="cc-detail"><span class="cc-label">Keywords</span><br>${keywords}</div>` : ''}
+      </div>`;
+    });
+    html += '</div></details></div>';
+  }
+
+  // Sources + Target Companies row
+  html += '<div class="config-row">';
+
+  // Sources
+  html += `<div class="config-section"><h3>Search Sources</h3><div class="${pb}">`;
+  if (config.sources && config.sources.length > 0) {
+    config.sources.forEach(s => {
+      const typeTag = s.type ? `<span class="config-tag source">${esc(s.type)}</span>` : '';
+      const url = s.url ? ` <a href="${esc(s.url)}" target="_blank" style="font-size:0.72rem;color:#2563eb;">&rarr;</a>` : '';
+      html += `<div style="margin-bottom:4px">${typeTag} <span style="font-size:0.82rem;color:#334155;">${esc(s.name || s.url || 'Unnamed')}</span>${url}</div>`;
+    });
+  } else {
+    html += '<span class="config-empty">No sources configured</span>';
+  }
+  html += '</div></div>';
+
+  // Target Companies + Watch
+  html += `<div class="config-section"><h3>Companies</h3><div class="${pb}">`;
+  html += '<div class="cc-detail" style="margin-bottom:8px"><span class="cc-label">Targets</span><br>';
+  html += tags(config.target_companies, 'target');
+  html += '</div>';
+  html += '<div class="cc-detail"><span class="cc-label">Watching</span><br>';
+  html += tags(config.watch, 'watch');
+  html += '</div></div></div>';
+
+  html += '</div>'; // end config-row
+
+  // Skip + Decline Patterns row
+  html += '<div class="config-row">';
+
+  html += `<div class="config-section"><h3>Skip List</h3><div class="${pb}">`;
+  html += tags(config.skip, 'skip');
+  html += '</div></div>';
+
+  html += `<div class="config-section"><h3>Decline Patterns</h3><div class="${pb}">`;
+  if (config.decline_patterns && config.decline_patterns.length > 0) {
+    config.decline_patterns.forEach(p => {
+      const text = typeof p === 'string' ? p : (p.pattern || JSON.stringify(p));
+      const from = (typeof p === 'object' && p.learned_from) ? ` <span style="font-size:0.7rem;color:#94a3b8;">(from ${esc(p.learned_from)})</span>` : '';
+      html += `<div style="margin-bottom:4px"><span class="config-tag decline">${esc(text)}</span>${from}</div>`;
+    });
+  } else {
+    html += '<span class="config-empty">None yet — patterns are learned from your declines</span>';
+  }
+  html += '</div></div>';
+
+  html += '</div>'; // end config-row
+
+  // Preferences summary
+  if (config.preferences) {
+    const p = config.preferences;
+    html += `<div class="config-section"><h3>Preferences</h3><div class="config-grid ${pb}">`;
+    if (p.comp_floor_usd) html += `<div class="config-card"><div class="cc-title">Comp Floor</div><div class="cc-detail">$${Number(p.comp_floor_usd).toLocaleString()}+${p.comp_exceptions ? ` <span style="font-size:0.72rem;color:#94a3b8;">(${esc(p.comp_exceptions)})</span>` : ''}</div></div>`;
+    if (p.max_travel_pct != null) html += `<div class="config-card"><div class="cc-title">Max Travel</div><div class="cc-detail">${p.max_travel_pct}%</div></div>`;
+    if (p.locations) html += `<div class="config-card"><div class="cc-title">Locations</div><div class="cc-detail">${(p.locations || []).map(l => esc(l)).join(', ')}</div></div>`;
+    if (p.seniority_floor) html += `<div class="config-card"><div class="cc-title">Seniority Floor</div><div class="cc-detail">${esc(p.seniority_floor)}</div></div>`;
+    html += '</div></div>';
+  }
+
+  panel.innerHTML = html;
+}
+
+// Briefs panel
+function toggleBriefsPanel() {
+  const overlay = document.getElementById('briefs-overlay');
+  const isVisible = overlay.classList.contains('visible');
+  if (isVisible) {
+    closeBriefs();
+  } else {
+    showBriefsList();
+    overlay.classList.add('visible');
+    document.getElementById('briefs-menu-item').classList.add('active');
+  }
+}
+
+function showBriefsList() {
+  const list = document.getElementById('briefs-list');
+  const body = document.getElementById('briefs-body');
+  const title = document.getElementById('briefs-title');
+  title.textContent = 'Search Briefs';
+  body.style.display = 'none';
+  body.innerHTML = '';
+
+  if (briefs.length === 0) {
+    list.innerHTML = '<div class="briefs-empty">No briefs yet. Run a search sweep to generate your first one.</div>';
+    list.style.display = 'block';
+    return;
+  }
+
+  list.innerHTML = briefs.map((b, i) =>
+    `<div class="briefs-item" onclick="openBrief(${i})">
+      <span class="brief-date">${esc(b.date)}</span>
+      <span class="brief-arrow">→</span>
+    </div>`
+  ).join('');
+  list.style.display = 'block';
+}
+
+function openBrief(idx) {
+  const brief = briefs[idx];
+  if (!brief) return;
+  const list = document.getElementById('briefs-list');
+  const body = document.getElementById('briefs-body');
+  const title = document.getElementById('briefs-title');
+  title.innerHTML = `<button class="briefs-back" style="display:inline;" onclick="showBriefsList()">← Back</button> ${esc(brief.date)}`;
+  list.style.display = 'none';
+  body.innerHTML = marked.parse(brief.content);
+  body.style.display = 'block';
+}
+
+function closeBriefs() {
+  document.getElementById('briefs-overlay').classList.remove('visible');
+  document.getElementById('briefs-menu-item').classList.remove('active');
+}
+
+document.getElementById('briefs-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('briefs-overlay')) closeBriefs();
+});
+
+// Initial render
+render();
+</script>
+</body>
+</html>
