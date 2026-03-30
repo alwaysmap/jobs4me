@@ -4,7 +4,25 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{ if .IsHome }}{{ .Site.Title }}{{ else }}{{ .Title }} | {{ .Site.Title }}{{ end }}</title>
-  <meta name="description" content="{{ with .Params.summary }}{{ . }}{{ else }}{{ .Site.Params.description }}{{ end }}">
+  {{- $desc := .Params.summary | default .Site.Params.description -}}
+  {{- $title := cond .IsHome .Site.Title (printf "%s | %s" .Title .Site.Title) -}}
+  {{- $image := .Site.BaseURL | strings.TrimSuffix "/" | printf "%s/images/board-overview.png" -}}
+  <meta name="description" content="{{ $desc }}">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="{{ if .IsHome }}website{{ else }}article{{ end }}">
+  <meta property="og:title" content="{{ $title }}">
+  <meta property="og:description" content="{{ $desc }}">
+  <meta property="og:url" content="{{ .Permalink }}">
+  <meta property="og:image" content="{{ $image }}">
+  <meta property="og:site_name" content="{{ .Site.Title }}">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{ $title }}">
+  <meta name="twitter:description" content="{{ $desc }}">
+  <meta name="twitter:image" content="{{ $image }}">
+
   {{ $css := resources.Get "css/site.css" | fingerprint }}
   <link rel="stylesheet" href="{{ $css.RelPermalink }}">
 </head>
