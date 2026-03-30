@@ -380,7 +380,7 @@ function openDetail(app) {
     decisionHtml = `<div class="dp-decision ${cls}">&ldquo;${app.decision.reason}&rdquo;</div>`;
   }
   const summaryHtml = app.agent_summary
-    ? `<div class="dp-summary">${renderSummaryHtml(app.agent_summary)}</div>` : '';
+    ? `<div class="dp-summary privacy-blur">${renderSummaryHtml(app.agent_summary)}</div>` : '';
 
   const hintHtml = app.stage === 'suggested'
     ? `<div class="dp-hint">To act on this role, tell Claude: <strong>/update ${app.company} - interested</strong> or <strong>/update ${app.company} - decline reason</strong></div>`
@@ -548,7 +548,9 @@ function openDoc(appId, type, company) {
   if (!md) return;
   const labels = { jd: 'Job Description', overview: 'Company Overview', prep: 'Interview Prep' };
   document.getElementById('doc-title').textContent = `${company || appId} — ${labels[type] || type}`;
-  document.getElementById('doc-body').innerHTML = marked.parse(md);
+  const body = document.getElementById('doc-body');
+  body.innerHTML = marked.parse(md);
+  body.classList.add('privacy-blur');
   document.getElementById('doc-overlay').classList.add('visible');
   // Close detail popup if open so they don't stack
   closeDetail();
@@ -747,6 +749,7 @@ function openBrief(idx) {
   title.innerHTML = `<button class="briefs-back" style="display:inline;" onclick="showBriefsList()">← Back</button> ${esc(brief.date)}`;
   list.style.display = 'none';
   body.innerHTML = marked.parse(brief.content);
+  body.classList.add('privacy-blur');
   body.style.display = 'block';
 }
 
