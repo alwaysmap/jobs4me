@@ -1,0 +1,7 @@
+baseURL: https://jobs4me.org/
+languageCode: en-us
+title: Jobs For Me
+params:
+  description: An AI-powered job search agent for Claude
+  tagline: Your job search, on autopilot.
+  repoUrl: https://github.com/alwaysmap/jobs4me

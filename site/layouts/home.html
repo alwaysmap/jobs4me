@@ -1,0 +1,46 @@
+{{ define "main" }}
+<section class="hero">
+  <div class="container">
+    <h1>{{ .Title }}</h1>
+    <p class="hero-sub">{{ .Site.Params.tagline }}</p>
+    {{ .Content }}
+    <div class="hero-cta">
+      <a href="/guides/installation/" class="btn">Get Started</a>
+    </div>
+    <div class="hero-image">
+      <img src="/images/board-overview.png" alt="Kanban board showing job search pipeline with Suggested and Maybe columns">
+    </div>
+  </div>
+</section>
+
+<section class="features">
+  <div class="container">
+    <div class="feature-grid">
+      <div class="feature-card">
+        <h3>Search</h3>
+        <p>Searches job boards and career pages using your role types and preferences. Filters out duplicates and bad fits automatically.</p>
+      </div>
+      <div class="feature-card">
+        <h3>Assess</h3>
+        <p>Scores every role against your background with a structured recommendation. Strong, Moderate, Stretch, or Pass.</p>
+      </div>
+      <div class="feature-card">
+        <h3>Learn</h3>
+        <p>Every decline teaches the filter. Over time, the agent stops suggesting roles you'd never take.</p>
+      </div>
+      <div class="feature-card">
+        <h3>Prepare</h3>
+        <p>Company research and interview prep with your experience mapped to their questions. Walk in ready.</p>
+      </div>
+      <div class="feature-card">
+        <h3>Track</h3>
+        <p>Kanban board with everything — suggestions, applications, interviews. Open it in your browser or serve it on your network.</p>
+      </div>
+      <div class="feature-card">
+        <h3>Apply</h3>
+        <p>Generates a short, personal cover letter in your voice. Links to your evidence. No buzzwords.</p>
+      </div>
+    </div>
+  </div>
+</section>
+{{ end }}

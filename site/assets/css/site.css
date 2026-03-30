@@ -1,0 +1,342 @@
+/* Jobs For Me — site styles
+   Inspired by neobrutalist design: bold, uncluttered, playful.
+   System font stack, no external fonts needed. */
+
+:root {
+  --black: #1a1a2e;
+  --white: #ffffff;
+  --bg: #faf9f6;
+  --accent: #7c3aed;
+  --accent-light: #ede9fe;
+  --warm: #ff8c42;
+  --warm-light: #fff3e6;
+  --text: #334155;
+  --text-muted: #64748b;
+  --border: #e2e8f0;
+  --shadow: 4px 4px 0 0 var(--black);
+  --shadow-sm: 2px 2px 0 0 var(--black);
+  --radius: 8px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.container {
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+h1, h2, h3 { color: var(--black); line-height: 1.2; }
+h1 { font-size: 2.5rem; margin-bottom: 1rem; }
+h2 { font-size: 1.75rem; margin: 2rem 0 0.75rem; }
+h3 { font-size: 1.25rem; margin: 1.5rem 0 0.5rem; }
+
+/* ── Nav ── */
+
+.site-nav {
+  background: var(--white);
+  border-bottom: 2px solid var(--black);
+  padding: 0.75rem 0;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.nav-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 64rem;
+}
+
+.nav-logo {
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: var(--black);
+  text-decoration: none;
+}
+
+.site-nav nav {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.site-nav nav a {
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.site-nav nav a:hover {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+/* ── Buttons ── */
+
+.btn {
+  display: inline-block;
+  padding: 0.65rem 1.5rem;
+  font-weight: 700;
+  font-size: 0.95rem;
+  border: 2px solid var(--black);
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: var(--white);
+  box-shadow: var(--shadow-sm);
+  text-decoration: none;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: var(--shadow);
+  text-decoration: none;
+}
+
+.btn-outline {
+  background: var(--white);
+  color: var(--black);
+}
+
+.btn-sm {
+  padding: 0.35rem 1rem;
+  font-size: 0.85rem;
+}
+
+/* ── Hero ── */
+
+.hero {
+  padding: 5rem 0 4rem;
+  text-align: center;
+}
+
+.hero h1 {
+  font-size: 3.5rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.hero-sub {
+  font-size: 1.35rem;
+  color: var(--text-muted);
+  margin-bottom: 1.5rem;
+}
+
+.hero .container > p {
+  font-size: 1.1rem;
+  max-width: 36rem;
+  margin: 0 auto 2rem;
+  color: var(--text);
+}
+
+.hero-cta {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.hero-image {
+  margin-top: 3rem;
+}
+
+.hero-image img {
+  width: 100%;
+  max-width: 56rem;
+  border: 2px solid var(--black);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+article img {
+  width: 100%;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  margin: 1.25rem 0;
+}
+
+/* ── Feature grid ── */
+
+.features {
+  padding: 3rem 0 5rem;
+}
+
+.features .container {
+  max-width: 64rem;
+}
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+}
+
+.feature-card {
+  background: var(--white);
+  border: 2px solid var(--black);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.feature-card:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: var(--shadow);
+}
+
+.feature-card h3 {
+  font-size: 1.1rem;
+  margin: 0 0 0.5rem;
+  color: var(--accent);
+}
+
+.feature-card p {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* ── Guide list (section pages) ── */
+
+.guide-list {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.guide-card {
+  display: block;
+  background: var(--white);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem 1.5rem;
+  text-decoration: none;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.guide-card:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-sm);
+  text-decoration: none;
+}
+
+.guide-card h3 {
+  margin: 0 0 0.25rem;
+  font-size: 1.1rem;
+  color: var(--black);
+}
+
+.guide-card p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+/* ── Page content ── */
+
+.page {
+  padding: 3rem 0 5rem;
+}
+
+.page-summary {
+  font-size: 1.15rem;
+  color: var(--text-muted);
+  margin-bottom: 2rem;
+}
+
+article p { margin: 0.75rem 0; }
+article ul, article ol { margin: 0.75rem 0 0.75rem 1.5rem; }
+article li { margin-bottom: 0.25rem; }
+
+article code {
+  background: var(--accent-light);
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  color: var(--accent);
+}
+
+article pre {
+  background: var(--black);
+  color: #e2e8f0;
+  padding: 1.25rem 1.5rem;
+  border-radius: var(--radius);
+  overflow-x: auto;
+  margin: 1.25rem 0;
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+article pre code {
+  background: none;
+  color: inherit;
+  padding: 0;
+}
+
+article blockquote {
+  border-left: 3px solid var(--accent);
+  padding-left: 1rem;
+  color: var(--text-muted);
+  margin: 1.25rem 0;
+}
+
+article table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.25rem 0;
+  font-size: 0.9rem;
+}
+
+article th, article td {
+  border: 1px solid var(--border);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+}
+
+article th {
+  background: var(--accent-light);
+  font-weight: 600;
+}
+
+article hr {
+  border: none;
+  border-top: 2px solid var(--border);
+  margin: 2.5rem 0;
+}
+
+/* ── Footer ── */
+
+footer {
+  border-top: 2px solid var(--border);
+  padding: 2rem 0;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* ── Responsive ── */
+
+@media (max-width: 768px) {
+  .hero h1 { font-size: 2.25rem; }
+  .feature-grid { grid-template-columns: 1fr; }
+  .site-nav nav { gap: 0.75rem; }
+  .site-nav nav a { font-size: 0.82rem; }
+  h1 { font-size: 2rem; }
+}

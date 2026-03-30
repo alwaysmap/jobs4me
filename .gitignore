@@ -3,6 +3,9 @@ node_modules/
 *.zip
 *.plugin
 
+# Hugo build output
+site/public/
+
 # User data (never commit)
 tracker.yaml
 profile.yaml
