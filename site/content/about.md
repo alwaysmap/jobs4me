@@ -3,7 +3,7 @@ title: About
 summary: Who made this and why.
 ---
 
-**Jobs For Me** was built by [Dylan Thomas](https://bitsby.me) at [AlwaysMap](https://alwaysmap.com).
+**Jobs For Me** was built by [Dylan Thomas](https://bitsby.me/about) at [AlwaysMap](https://alwaysmap.com).
 
 ## Why this exists
 
