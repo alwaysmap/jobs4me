@@ -2,7 +2,7 @@
 name: tweak
 description: >
   Use this skill when the user wants to adjust, change, or update their job search
-  configuration — profile preferences, archetypes, sources, target companies, skip lists,
+  configuration — profile preferences, role types, sources, target companies, skip lists,
   career evidence, or compensation settings. Triggers on "tweak", "change my settings",
   "add a company", "update my sources", "adjust my filters", "add evidence", or any
   request to modify profile.yaml, archetypes.yaml, or filters.yaml. Also use when the
@@ -24,7 +24,7 @@ Read the user's message to figure out what they want to change. If they just sai
 >
 > - **Profile** — update your preferences (comp floor, location, travel, seniority)
 > - **Career evidence** — add projects, write-ups, talks, case studies, or portfolio links
-> - **Archetypes** — add, remove, or refine the types of roles I search for
+> - **Role types** — add, remove, or refine the types of roles I search for
 > - **Target companies** — add a dream company, remove one, or put one on a watch list
 > - **Skip list** — add companies or patterns to avoid
 > - **Sources** — add a new job board, investor portfolio, career page, or industry site to search
@@ -41,8 +41,8 @@ Map the user's request to the right file and section:
 | "watch [company]" / "keep an eye on [company]" | filters.yaml | Add to watch list |
 | "skip [company]" / "never show me [company]" | filters.yaml | Add to skip list |
 | "add [source/URL] to my sources" | filters.yaml | Add to include.sources with appropriate type |
-| "stop searching for [role type]" | archetypes.yaml | Remove or disable the archetype |
-| "add a new role type for [description]" | archetypes.yaml | Draft a new archetype, confirm with user |
+| "stop searching for [role type]" | archetypes.yaml | Remove or disable the role type |
+| "add a new role type for [description]" | archetypes.yaml | Draft a new role type, confirm with user |
 | "change my comp floor to [amount]" | profile.yaml | Update preferences.comp_floor_usd |
 | "I'm open to [location] now" | profile.yaml | Add to preferences.locations |
 | "add [URL] to my evidence" | profile.yaml | Fetch URL, extract key points, add to evidence |
@@ -52,7 +52,7 @@ Map the user's request to the right file and section:
 
 When adding sources, help the user classify them:
 
-- **job_board** — LinkedIn, Indeed, Wellfound, Hacker News, HigherEdJobs, Idealist.org, USAJOBS, Health eCareers, or any field-specific board. *Searched with archetype keywords + location.*
+- **job_board** — LinkedIn, Indeed, Wellfound, Hacker News, HigherEdJobs, Idealist.org, USAJOBS, Health eCareers, or any field-specific board. *Searched with role type keywords + location.*
 - **org_portfolio** — any page that lists a cluster of employers: VC portfolio pages (a16z.com/portfolio), university system directories, health system networks, foundation grantee lists, PE firm portfolios. *Scanned to discover employers, then each employer's career page is checked.*
 - **career_page** — a specific employer's careers/jobs page. *Checked directly for matching roles.*
 - **curated_list** — "Best Places to Work" lists, professional association directories, conference sponsor lists, Carnegie Classification lists, "Top 50 Nonprofits" lists. *Scanned for employer names like org_portfolio.*
@@ -60,7 +60,7 @@ When adding sources, help the user classify them:
 
 If the user shares a portfolio or directory URL, fetch it to confirm it's a useful source and describe what you found:
 
-> I checked that page — it lists 47 organizations, mostly in [domain]. I'll include it in future searches and check each one's career page for matching roles. Looks like a good source for your [archetype] targets.
+> I checked that page — it lists 47 organizations, mostly in [domain]. I'll include it in future searches and check each one's career page for matching roles. Looks like a good source for your [role type] targets.
 
 ## Career evidence mode
 
@@ -75,7 +75,7 @@ If the user wants to add evidence beyond their resume (projects, talks, case stu
 
 Structure into a case study, tag with skills/themes, save.
 
-**Option C: Fill gaps** — Read archetypes.yaml and identify which requirements have weak evidence. Ask targeted questions.
+**Option C: Fill gaps** — Read archetypes.yaml and identify which role types have requirements with weak evidence. Ask targeted questions.
 
 After capturing evidence, suggest ways to strengthen their profile:
 > You've got strong evidence for [X, Y] but I don't have much for [Z]. A few ideas: write up [that project] as a blog post, create a GitHub repo for [that side project]...

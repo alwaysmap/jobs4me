@@ -18,19 +18,19 @@ If a constraint fails, return a brief agent_summary:
 **Pass** — [constraint] does not meet minimum ([value] vs. required [floor])
 ```
 
-## Step 2: Archetype Matching
+## Step 2: Role Type Matching
 
-Determine which archetype the role best fits. Read `archetypes.yaml` and compare:
+Determine which role type the role best fits. Read `archetypes.yaml` and compare:
 
 - Does the role title match or closely resemble any `target_titles`?
 - Does the JD language overlap with `search_keywords`?
 - Does the company size/type match `company_fit`?
 
-If no archetype is a reasonable match, the role may still be worth flagging if it's an unusual opportunity. Note this in the recommendation.
+If no role type is a reasonable match, the role may still be worth flagging if it's an unusual opportunity. Note this in the recommendation.
 
 ## Step 3: Evidence Mapping
 
-For the matched archetype, read its `experience_mapping` and compare against the JD requirements:
+For the matched role type, read its `experience_mapping` and compare against the JD requirements:
 
 - Which requirements does the user's experience directly address?
 - Which requirements are adjacent (related but not direct)?

@@ -14,7 +14,7 @@ user_summary: >
 
 # Update Role Status
 
-**Shell setup:** before running tracker commands, `export JFM_DIR='<workspace path>'` (single quotes). Then omit `--dir` from commands. See `search/references/data-safety.md`.
+**Shell setup:** The tracker script auto-detects the workspace directory. Set `JFM_DIR` only if the path contains special characters.
 
 Update the stage or status of a tracked role, including declining roles.
 
@@ -41,7 +41,7 @@ Common shorthand the user might use (map these to stages):
 
 1. Find the application by company name:
    ```bash
-   node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js find --company "Company Name" --dir .
+   node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js find --company "Company Name"
    ```
    If multiple roles at the same company, ask which one.
 
@@ -50,30 +50,31 @@ Common shorthand the user might use (map these to stages):
    Extract the reason from the user's message (everything after the status keyword).
 
    ```bash
-   node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js decline --id <id> --reason "reason text" --dir . --rebuild-board
+   node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js decline --id <id> --reason "reason text"
    ```
 
    Run the decline pattern learning process (from the search skill's decline-learning reference):
    - Check if this decline suggests a new pattern or refines an existing one
    - If a new pattern should be added:
      ```bash
-     node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js add-decline-pattern --dir . --pattern "Pattern description" --learned-from "Company Name" --rebuild-board
+     node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js add-decline-pattern --pattern "Pattern description" --learned-from "Company Name"
      ```
    - Tell the user what filter change was made (if any)
 
 3. **If changing to any other stage**:
 
    ```bash
-   node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js stage --id <id> --stage <stage> --dir . --rebuild-board
+   node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js stage --id <id> --stage <stage>
    ```
 
    If the user included a note, update the entry:
    ```bash
-   node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js update --id <id> --dir . --json '{"notes":"existing notes\n2026-03-27: new note text"}' --rebuild-board
+   node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js update --id <id> --json '{"notes":"existing notes\n2026-03-27: new note text"}'
    ```
    Preserve existing notes — append the new note with a date stamp.
 
 4. **Post-update actions**:
+   - After every stage change or decline, tell the user: "Your board has been updated — open `Kanban/index.html` to see the change."
    - If new stage is `applied`, suggest running `/apply` to generate a cover letter if they haven't already
    - If new stage is `interviewing`, suggest running `/prep` for that company
    - If new stage is `rejected` or `closed`, acknowledge briefly — don't over-sympathize, just confirm and move on
@@ -108,7 +109,7 @@ If no arguments are provided (user just typed `/update`), list their active role
 
 1. Get all applications:
    ```bash
-   node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js list --dir .
+   node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js list
    ```
 
 2. Filter to active stages only: `suggested`, `maybe`, `applied`, `interviewing`, `offered`. Exclude `declined`, `rejected`, `closed`.
@@ -128,7 +129,7 @@ If no arguments are provided (user just typed `/update`), list their active role
    > - CoolCo — TPM Lead
    > - AnotherCo — Partner Engineering Manager
    >
-   > Just tell me the company name and what happened — like "Acme - got a phone screen scheduled" or "CoolCo - decline, too junior"
+   > Just tell me the company (or company + role if there are multiple) and what happened — like "Acme - got a phone screen scheduled" or "CoolCo - decline, too junior"
    >
    > **Quick stage reference:**
    > Suggested -> **Maybe** (interested) -> **Applied** -> **Interviewing** -> **Offered**

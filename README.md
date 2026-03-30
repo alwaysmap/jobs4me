@@ -18,21 +18,23 @@ An AI-powered job search agent that runs on your Claude Pro or Max subscription.
 
 That's it. No dependencies to install, no API keys to configure — the plugin runs entirely on your Claude subscription inside Cowork's VM.
 
-The setup takes about 15 minutes. Claude will ask about your background, help you define the types of roles you're targeting, and set up your search sources. Then it runs a first search so you can calibrate by accepting or declining suggestions.
+Setup gives you two options: a **full setup** (~10 minutes) that walks through your background, preferences, role types, target companies, and search sources, or a **quick start** (~3 minutes) where you just share your resume and describe the roles you want. Either way, everything is adjustable later with `/tweak`.
+
+After setup, the first `/search` run takes around **20 minutes** — it's checking all your sources, assessing each role, and building your initial board. Future searches are faster because the agent already knows what to skip.
 
 ## Commands
 
 | Command | What It Does |
 |---------|-------------|
-| `/setup` | Guided onboarding — profile, archetypes, sources, and first search |
+| `/setup` | Guided onboarding — profile, role types, sources, and first search |
 | `/search` | Run a search sweep right now |
 | `/assess <url>` | Assess a specific job posting against your profile |
 | `/update <company> - <status>` | Move a role through stages — interested, applied, interviewing, decline, etc. |
 | `/prep <company>` | Generate interview prep for a company |
 | `/board` | Regenerate and view your kanban board |
-| `/tweak` | Adjust anything — companies, sources, archetypes, evidence, preferences |
+| `/tweak` | Adjust anything — companies, sources, role types, evidence, preferences |
 
-Everything is adjustable after setup. Missed something? Run `/setup` again or `/tweak` to make targeted changes. Found a job posting on your own? Use `/assess` with the URL.
+Everything is adjustable after setup. Missed something? Run `/setup` again — it detects your existing config and helps you complete or adjust it (same as `/tweak`). Found a job posting on your own? Use `/assess` with the URL.
 
 ## Automate It
 
@@ -50,7 +52,7 @@ New roles show up on your board without you lifting a finger. Review them when i
 All your data lives as plain files in your selected folder:
 
 - `profile.yaml` — your background and preferences
-- `archetypes.yaml` — the role types you're targeting
+- `archetypes.yaml` — the types of roles you're targeting
 - `filters.yaml` — company include/exclude lists and decline patterns
 - `tracker.yaml` — all applications and their state
 - `Kanban/index.html` — kanban board (open in your browser, or serve with `tailscale serve`)
@@ -67,7 +69,7 @@ You can read and edit any of these files directly. They're plain YAML and markdo
 
 ## How It Works
 
-The plugin teaches Claude how to be a job search agent through skills (domain knowledge) and commands (actions). When you run `/search`, Claude reads your profile, archetypes, and filters, searches the web for matching roles, assesses each one against your background, and adds the good ones to your tracker.
+The plugin teaches Claude how to be a job search agent through skills (domain knowledge) and commands (actions). When you run `/search`, Claude reads your profile, role types, and filters, searches the web for matching roles, assesses each one against your background, and adds the good ones to your tracker.
 
 Every time you decline a role with a reason, Claude checks if the reason represents a pattern and updates your filters. Over time, the agent gets better at predicting what you want.
 

@@ -24,10 +24,19 @@ Create research documents that help the user walk into an interview with company
 ## Workflow
 
 1. Read `profile.yaml` and `tracker.yaml`
-2. Find the application matching the company name in the tracker. If multiple roles at the same company, ask which one.
-3. Get file paths for this application:
+2. Find the application matching the company name:
    ```bash
-   node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js paths --id <id> --dir .
+   node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js find --company "Company Name"
+   ```
+   If multiple roles are returned for the same company, list them with role titles and stages and ask which one:
+   > I found two roles at Google:
+   > 1. Staff Engineer (maybe)
+   > 2. Engineering Manager (interviewing)
+   >
+   > Which one are you prepping for?
+3. Get file paths for the chosen application:
+   ```bash
+   node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js paths --id <id>
    ```
    This returns `company_dir`, `role_dir`, and current file locations.
 4. If a JD exists (check `has_jd` from paths output), read it. If not, ask the user for the job posting URL and fetch it.
@@ -38,25 +47,44 @@ Create research documents that help the user walk into an interview with company
    - Interview Prep → `{role_dir}/prep.md` (role-specific)
    Create directories with `mkdir -p` if they don't exist.
 8. Update the application's stage to `interviewing` in `tracker.yaml` if it isn't already.
-9. Offer to regenerate `Kanban/index.html`.
+9. **Show the user what was created.** After saving, present the documents inline:
 
-If no company name is provided, check the tracker for roles in `applied` or `interviewing` stages and list them:
+   > **Company Overview** — `{company_dir}/overview.md`
+   > {Show a 3-4 line summary of what the overview covers}
+   >
+   > **Interview Prep** — `{role_dir}/prep.md`
+   > {Show a 3-4 line summary: number of topics covered, key areas, questions to ask}
+   >
+   > Read the full docs in `{company_dir}/` or click the links on your board.
+   > Your board has been updated — open `Kanban/index.html` to see everything.
 
-> Which company are you prepping for?
+If no company name is provided, check the tracker for roles in any non-terminal stage and list them, prioritizing `interviewing` and `applied`:
+
+> Which role are you prepping for?
 >
-> **Currently active:**
-> - Acme Corp — VP Engineering (interviewing)
-> - BigCo — Director of Programs (applied)
+> **Interviewing:**
+> - Acme Corp — VP Engineering
+>
+> **Applied:**
+> - BigCo — Director of Programs
+>
+> **Other active roles:**
+> - Google — Staff Engineer (maybe)
+> - Google — Engineering Manager (suggested)
 >
 > Or paste a job posting URL and I'll prep for that one.
 
-This makes it easy to pick without remembering exact names.
+This makes it easy to pick without remembering exact names. Always show the role title — company name alone is ambiguous when there are multiple roles at the same company.
 
 ## Documents to Generate
 
-For each company/role, create two files in the workspace:
+**You MUST create exactly TWO separate files.** Do not combine them. They serve different purposes and appear as separate links on the board.
 
-### 1. Company Overview (`companies/{Company}/overview.md`)
+---
+
+### File 1: Company Overview → `{company_dir}/overview.md`
+
+This is a **company-level** document shared across all roles at this company. If it already exists, skip it.
 
 Research the company and write a concise overview covering:
 
@@ -67,11 +95,17 @@ Research the company and write a concise overview covering:
 - **Culture signals**: Glassdoor themes, engineering blog tone, public statements on values
 - **Why this role exists**: What problem is the company trying to solve by hiring for this role? (infer from JD + company context)
 
-Keep it scannable — the user should be able to read this in 10 minutes before an interview.
+Keep it scannable — 10 minutes to read before an interview. **This file contains ONLY company research. No interview questions, no experience mapping.**
 
-### 2. Interview Prep (`companies/{Company}/{YYYY-MM-role-slug}/prep.md`)
+---
 
-Read `references/prep-template.md` for the detailed structure. The core pattern:
+### File 2: Interview Prep → `{role_dir}/prep.md`
+
+This is a **role-specific** document. It contains everything the user needs to prepare for interviews for THIS specific role.
+
+Read `references/prep-template.md` for the detailed structure. The prep doc has three sections:
+
+**Section A — JD-Based Interview Topics**
 
 For each likely interview topic (inferred from the JD requirements):
 
@@ -80,40 +114,31 @@ For each likely interview topic (inferred from the JD requirements):
 3. **Bridge to their needs**: How does this story connect to what the company needs?
 4. **Gaps to address honestly**: Where is the evidence thin? How should the user frame this?
 
-End with **Questions to ask them** — 5-8 thoughtful questions that demonstrate research and genuine curiosity about the role.
+**Section B — Industry & Company Context Questions**
 
-### 3. Industry & Company-Specific Questions
+Beyond the JD requirements, anticipate questions based on the company's industry, stage, and recent context. These are questions interviewers ask because of *who they are*, not just what the role needs.
 
-Beyond the JD requirements, research the company's **industry, business model, and stage** to anticipate questions the JD won't spell out. These are the questions interviewers ask because of *who they are*, not just what the role needs.
+Research the company to identify:
+- **Industry vertical** (fintech, healthtech, developer tools, enterprise SaaS, etc.)
+- **Company stage** (early startup, growth, public, turnaround)
+- **Recent context** (acquisition, IPO, layoffs, new market entry, leadership change)
 
-**Research the company to identify:**
-- **Industry vertical** (fintech, healthtech, developer tools, enterprise SaaS, etc.) — each has signature interview topics
-- **Company stage** (early startup, growth, public, turnaround) — this shapes what they care about
-- **Recent context** (acquisition, IPO, layoffs, new market entry, leadership change) — interviewers will want to know you understand their moment
-
-**Then generate a section in the prep doc:**
+Generate 3-5 industry/context questions in the prep doc:
 
 ```markdown
 ## Industry & Company Context Questions
 
-These are questions likely to come up because of {Company}'s position as a {stage} {industry} company, not just from the JD:
-
-### {Topic 1 — e.g., "Regulated environment"}
-**Why they'll ask**: {e.g., "Fintech companies always probe for comfort with compliance, audit trails, and working with legal/risk teams"}
-**Likely question**: "{e.g., Tell me about a time you shipped a product in a regulated environment. How did you balance speed with compliance?}"
+### {Topic — e.g., "Regulated environment"}
+**Why they'll ask**: {e.g., "Fintech companies always probe for compliance comfort"}
+**Likely question**: "{e.g., Tell me about shipping in a regulated environment}"
 **Your story**: {mapped from user's evidence}
-
-### {Topic 2 — e.g., "Scaling past product-market fit"}
-**Why they'll ask**: {e.g., "Series C companies are usually past PMF and struggling with process/org scaling"}
-**Likely question**: "..."
-**Your story**: ...
 ```
 
-Common industry-specific patterns to check:
+Common patterns to check:
 - **Fintech/healthtech**: Compliance, regulated shipping, security posture, working with legal
 - **Developer tools**: Dogfooding, developer empathy, open source community, API design
-- **Enterprise SaaS**: Long sales cycles, customer success alignment, multi-tenant architecture, enterprise security reviews
-- **Marketplace/platform**: Two-sided dynamics, supply/demand balance, trust & safety, network effects
+- **Enterprise SaaS**: Long sales cycles, customer success alignment, multi-tenant architecture
+- **Marketplace/platform**: Two-sided dynamics, supply/demand balance, trust & safety
 - **Hardware + software**: Manufacturing timelines, firmware/software coordination, supply chain, hardware iteration cost
 - **AI/ML companies**: Responsible AI, evaluation methodology, data quality, model deployment, keeping up with rapid change
 - **Growth-stage startups**: Wearing multiple hats, building process from scratch, hiring fast, ambiguity tolerance
@@ -122,6 +147,14 @@ Common industry-specific patterns to check:
 
 Generate 3-5 of these industry/context questions per company. They should feel like the questions a well-prepared candidate would *expect* but a generic prep guide would miss.
 
+**Section C — Questions to Ask Them**
+
+End the prep doc with 5-8 thoughtful questions that demonstrate research and genuine curiosity about the role. These should be specific to the company and role, not generic.
+
+---
+
+**Reminder: File 1 (`overview.md`) = company research only. File 2 (`prep.md`) = Sections A + B + C above. Two separate files, two separate links on the board.**
+
 ## Evidence Sources
 
 Read the user's evidence in this order of preference:
@@ -129,9 +162,11 @@ Read the user's evidence in this order of preference:
 1. `profile.yaml` → `evidence.resume_url` (fetch and read)
 2. `profile.yaml` → `evidence.portfolio_urls` (check for relevant projects)
 3. `profile.yaml` → `evidence.additional_context` (user-written narrative)
-4. `archetypes.yaml` → the matched archetype's `experience_mapping`
+4. `archetypes.yaml` → the matched role type's `experience_mapping`
 
 The user's thinnest area is typically case studies — the interview prep doc should do the heavy lifting of connecting their experience to the role's requirements. Don't just list qualifications; tell the user which story to tell for each topic.
+
+Company overview research uses **Sonnet** sub-agents. Interview prep generation uses the main **Opus** agent for deeper reasoning about experience mapping.
 
 ## Additional Resources
 

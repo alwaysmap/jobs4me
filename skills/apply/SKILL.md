@@ -24,10 +24,19 @@ Generate application materials — a cover letter and optionally a tailored resu
 ## Workflow
 
 1. Read `profile.yaml`, `archetypes.yaml`, and `tracker.yaml`
-2. Find the application matching the company. If multiple roles at the same company, ask which one.
+2. Find the application matching the company:
+   ```bash
+   node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js find --company "Company Name"
+   ```
+   If multiple roles are returned for the same company, list them with role titles and stages and ask which one:
+   > I found two roles at Google:
+   > 1. Staff Engineer (maybe)
+   > 2. Engineering Manager (applied)
+   >
+   > Which one are you applying to?
 3. Get file paths:
    ```bash
-   node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js paths --id <id> --dir .
+   node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js paths --id <id>
    ```
 4. Read the JD (from `{role_dir}/jd.md`). If it doesn't exist, ask the user for the posting URL and fetch + save it.
 5. Read the Company Overview if it exists (`{company_dir}/overview.md`). If not, generate one first (see prep skill).
@@ -35,7 +44,7 @@ Generate application materials — a cover letter and optionally a tailored resu
    - `profile.yaml` → `evidence.resume_url` (fetch the full resume)
    - `profile.yaml` → `evidence.portfolio_urls`
    - `profile.yaml` → `evidence.additional_context`
-   - `archetypes.yaml` → the matched archetype's `experience_mapping`
+   - `archetypes.yaml` → the matched role type's `experience_mapping`
 7. Generate the cover letter (see format below)
 8. Ask the user if they'd like a tailored resume (see format below)
 9. Save files to the role directory:
@@ -43,9 +52,20 @@ Generate application materials — a cover letter and optionally a tailored resu
    - Tailored resume → `{role_dir}/resume.md` (if requested)
 10. Move the role to `applied` if it isn't already:
     ```bash
-    node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js stage --id <id> --stage applied --dir . --rebuild-board
+    node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js stage --id <id> --stage applied
     ```
-11. Show the user the cover letter for review. Iterate if they give feedback.
+11. **Show the user what was created.** Present the cover letter inline (full text) so they can review it without opening a file:
+
+    > **Cover letter** — `{role_dir}/cover-letter.md`
+    >
+    > {Show the full cover letter text here}
+    >
+    > {If tailored resume was also created:}
+    > **Tailored resume** — `{role_dir}/resume.md`
+    >
+    > Your board has been updated — open `Kanban/index.html` to see the change.
+
+    Iterate if they give feedback — update the file and show the revised version inline.
 
 ## Cover Letter Format
 
@@ -110,6 +130,6 @@ Read evidence in this order of preference:
 1. `profile.yaml` → `evidence.resume_url` (fetch and read)
 2. `profile.yaml` → `evidence.portfolio_urls` (check for relevant projects)
 3. `profile.yaml` → `evidence.additional_context` (user-written narrative)
-4. `archetypes.yaml` → the matched archetype's `experience_mapping`
+4. `archetypes.yaml` → the matched role type's `experience_mapping`
 5. Company Overview (`{company_dir}/overview.md`) for company context
 6. JD (`{role_dir}/jd.md`) for role requirements

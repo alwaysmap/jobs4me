@@ -539,7 +539,8 @@ const docRaw = document.getElementById('document-data').textContent.trim();
 const documents = docRaw && docRaw !== '__DOCUMENT_DATA__' ? JSON.parse(docRaw) : {};
 
 function openDoc(appId, type, company) {
-  const key = `${appId}::${type}`;
+  // Overview is company-level (keyed by company name), JD/prep are role-specific (keyed by app ID)
+  const key = type === 'overview' ? `${company}::overview` : `${appId}::${type}`;
   const md = documents[key];
   if (!md) return;
   const labels = { jd: 'Job Description', overview: 'Company Overview', prep: 'Interview Prep' };
@@ -596,7 +597,7 @@ function renderConfig() {
 
   // Archetypes (collapsible)
   if (config.archetypes && config.archetypes.length > 0) {
-    html += `<div class="config-section"><h3>Role Archetypes</h3><details><summary>${config.archetypes.length} archetype${config.archetypes.length === 1 ? '' : 's'} configured</summary><div class="config-grid ${pb}">`;
+    html += `<div class="config-section"><h3>Role Types</h3><details><summary>${config.archetypes.length} role type${config.archetypes.length === 1 ? '' : 's'} configured</summary><div class="config-grid ${pb}">`;
     config.archetypes.forEach(a => {
       const titles = (a.titles || []).map(t => `<span class="config-tag archetype">${esc(t)}</span>`).join('');
       const keywords = (a.keywords || []).map(k => `<span class="config-tag">${esc(k)}</span>`).join('');

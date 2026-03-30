@@ -12,48 +12,57 @@ user_summary: >
 
 # Assess a Job Posting
 
-**Shell setup:** before running tracker commands, `export JFM_DIR='<workspace path>'` (single quotes). Then omit `--dir` from commands. See `search/references/data-safety.md`.
+**Shell setup:** The tracker script auto-detects the workspace directory. Set `JFM_DIR` only if the path contains special characters.
 
 Assess a specific job posting against the user's profile.
 
 ## Steps
 
 1. Read `profile.yaml`, `archetypes.yaml`, and `filters.yaml`
-2. Fetch the URL provided by the user using WebFetch
+2. Fetch the URL provided by the user using WebFetch. Use **Haiku** for simple JD extraction from URLs if delegating to a sub-agent.
 3. Extract the job description from the page
 4. Run a full fit assessment using the search skill's fit assessment framework
 5. Present the assessment to the user (Recommendation, Gaps, Positive Fit)
 6. Ask if they want to add it to the tracker — or decline it immediately
-7. **If adding**, add via the tracker script (with `--rebuild-board` so the board updates automatically):
+7. **If adding**, add via the tracker script:
    ```bash
-   node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js add --dir . --rebuild-board --json '{"company":"...","role":"...","url":"...","archetype":"...","stage":"suggested","agent_summary":"..."}'
+   node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js add --json '{"company":"...","role":"...","url":"...","archetype":"...","stage":"suggested","agent_summary":"..."}'
    ```
 8. Get the file paths for the new entry and save the JD:
    ```bash
-   node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js paths --id <id> --dir .
+   node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js paths --id <id>
    ```
    This returns `role_dir` and `company_dir`. Save the JD to `{role_dir}/jd.md`. Create the directories if they don't exist (`mkdir -p`).
+
+   After saving, tell the user what was created:
+   > **Added to tracker** — {Company} / {Role}
+   > **JD saved** — `{role_dir}/jd.md`
+   > Your board has been updated — open `Kanban/index.html` to see it.
 9. **If declining** (user says "not interested", "pass", "decline", etc.):
    - If already added to tracker, decline it:
      ```bash
-     node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js decline --id <id> --reason "reason text" --dir . --rebuild-board
+     node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js decline --id <id> --reason "reason text"
      ```
    - If not yet added, add it as declined so the reason is tracked:
      ```bash
-     node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js add --dir . --rebuild-board --json '{"company":"...","role":"...","url":"...","stage":"declined","decision":{"proceed":"no","reason":"reason text"}}'
+     node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js add --json '{"company":"...","role":"...","url":"...","stage":"declined","decision":{"proceed":"no","reason":"reason text"}}'
      ```
    - **Always run decline pattern learning** (see `search/references/decline-learning.md`):
      check if this decline suggests a new pattern or refines an existing one. If so:
      ```bash
-     node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js add-decline-pattern --dir . --pattern "Pattern description" --learned-from "Company Name" --rebuild-board
+     node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js add-decline-pattern --pattern "Pattern description" --learned-from "Company Name"
      ```
      Tell the user what filter change was made (if any).
+   Your board has been updated — open `Kanban/index.html` to see the change.
 
 10. **Auto company research** — after adding a non-declined role, check if this company already has research:
     ```bash
-    node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js needs-research --dir .
+    node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js needs-research
     ```
-    If the company appears in the `needs_research` list, launch a background sub-agent to generate the Company Overview (see the "Company Overview" section of the prep skill for the template). Save it to `{company_dir}/overview.md`. This is a company-level doc shared across all roles at that company — only one research pass per company. The `needs-research` command automatically skips companies that only have declined/rejected/closed roles.
+    If the company needs research, generate a Company Overview inline (see the "Company Overview" section of the prep skill). Save to `{company_dir}/overview.md`. One overview per company — skip companies that already have one.
+    > "Researching {company}... done."
+
+    Rebuild the board after writing the overview so it's embedded in the board.
 
 If no URL is provided, ask the user for one. They can also paste the JD text directly instead of a URL.
 

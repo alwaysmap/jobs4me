@@ -5,7 +5,7 @@
  * All reads and writes go through js-yaml, so output is always valid YAML.
  * Claude calls this script via Bash instead of writing YAML by hand.
  *
- * All mutating commands accept --rebuild-board to auto-regenerate Kanban/index.html.
+ * All mutating commands auto-rebuild Kanban/index.html unless --no-board is passed.
  * All mutating commands automatically: backup → mutate → validate → print JSON result.
  *
  * Usage: node tracker.js <command> [options]
@@ -13,10 +13,19 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import yaml from 'js-yaml';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Auto-install dependencies if missing (first run in a fresh Cowork VM)
+if (!fs.existsSync(path.join(__dirname, 'node_modules', 'js-yaml'))) {
+  console.error('Installing dependencies (first run)...');
+  execSync('npm install --production', { cwd: __dirname, stdio: 'inherit' });
+}
+
+// eslint-disable-next-line import/no-unresolved — resolved after auto-install above
+const yaml = (await import('js-yaml')).default;
 
 // ────────────────────────────────────────────────────────────────
 // Constants
@@ -27,20 +36,22 @@ const VALID_STAGES = [
   'offered', 'rejected', 'closed', 'declined',
 ];
 
-// Deprecated stage names that should be auto-migrated
+/** Deprecated stage names → canonical names. */
 const STAGE_ALIASES = { possible: 'maybe' };
 
-// Valid stage transitions (from → allowed destinations)
+/** Valid stage transitions: from → allowed destinations. */
 const STAGE_TRANSITIONS = {
-  suggested: ['maybe', 'applied', 'declined'],
-  maybe:     ['applied', 'interviewing', 'declined'],
-  applied:   ['interviewing', 'rejected', 'closed', 'declined'],
+  suggested:    ['maybe', 'applied', 'declined'],
+  maybe:        ['applied', 'interviewing', 'declined'],
+  applied:      ['interviewing', 'rejected', 'closed', 'declined'],
   interviewing: ['offered', 'rejected', 'closed', 'declined'],
-  offered:   ['applied', 'closed', 'declined'],
-  rejected:  ['applied'],        // re-apply after rejection
-  closed:    ['suggested'],      // re-opened posting
-  declined:  ['suggested', 'maybe'],  // changed mind
+  offered:      ['applied', 'closed', 'declined'],
+  rejected:     ['applied'],
+  closed:       ['suggested'],
+  declined:     ['suggested', 'maybe'],
 };
+
+const TERMINAL_STAGES = new Set(['declined', 'rejected', 'closed']);
 
 const YAML_DUMP_OPTIONS = {
   lineWidth: -1,
@@ -76,9 +87,9 @@ const YAML_DUMP_OPTIONS = {
 
 /**
  * @typedef {Object} DocPaths
- * @property {string} jd        - Resolved path to JD file (may not exist)
- * @property {string} overview  - Resolved path to overview file
- * @property {string} prep      - Resolved path to prep file
+ * @property {string} jd
+ * @property {string} overview
+ * @property {string} prep
  * @property {boolean} has_jd
  * @property {boolean} has_overview
  * @property {boolean} has_prep
@@ -107,7 +118,7 @@ function parseArgs(argv) {
 
 const trackerPath = (dir) => path.join(dir, 'tracker.yaml');
 const filtersPath = (dir) => path.join(dir, 'filters.yaml');
-const backupsPath = (dir) => path.join(dir, '.backups');
+const backupsDir  = (dir) => path.join(dir, '.backups');
 
 function slugify(text, maxLen = 50) {
   return (text || 'unknown')
@@ -117,37 +128,59 @@ function slugify(text, maxLen = 50) {
     .slice(0, maxLen);
 }
 
-function roleDirName(app) {
-  const date = app.dates?.identified || app.dates?.suggested
+/** Extract the identified date from an application record. */
+function identifiedDate(app) {
+  return app.dates?.identified
+    || app.dates?.suggested
     || app.last_updated
     || today();
-  return `${date.slice(0, 7)}-${slugify(app.role)}`;
 }
 
-function companyDir(dir, company) {
+/** Directory name for a role: YYYY-MM-DD-slugified-title. */
+function roleDirName(app) {
+  return `${identifiedDate(app).slice(0, 10)}-${slugify(app.role)}`;
+}
+
+/** Legacy format: YYYY-MM-slugified-title (before v0.4). */
+function legacyRoleDirName(app) {
+  return `${identifiedDate(app).slice(0, 7)}-${slugify(app.role)}`;
+}
+
+function companyDirPath(dir, company) {
   return path.join(dir, 'companies', company);
 }
 
-function roleDir(dir, app) {
-  return path.join(companyDir(dir, app.company || 'Unknown'), roleDirName(app));
+/**
+ * Resolve the role directory, checking for legacy format on disk.
+ * Note: performs fs.existsSync checks to support legacy fallback.
+ */
+function roleDirPath(dir, app) {
+  const cd = companyDirPath(dir, app.company || 'Unknown');
+  const preferred = path.join(cd, roleDirName(app));
+  if (fs.existsSync(preferred)) return preferred;
+
+  const legacy = path.join(cd, legacyRoleDirName(app));
+  if (fs.existsSync(legacy)) return legacy;
+
+  return preferred;
 }
 
 /**
  * Resolve document paths for an application.
- * Checks new `companies/` structure first, falls back to legacy flat layout.
+ * Checks `companies/` structure first, falls back to legacy flat layout.
  * @param {string} dir
  * @param {Application} app
  * @returns {DocPaths}
  */
 function resolveDocPaths(dir, app) {
   const company = app.company || '';
-  const rd = roleDir(dir, app);
-  const cd = companyDir(dir, company);
+  const rd = roleDirPath(dir, app);
+  const cd = companyDirPath(dir, company);
 
   const candidates = {
-    jd:       [path.join(rd, 'jd.md'),       path.join(dir, 'active', `${company} - JD.md`)],
-    overview: [path.join(cd, 'overview.md'),  path.join(dir, `${company} - Company Overview.md`)],
-    prep:     [path.join(rd, 'prep.md'),      path.join(dir, `${company} - Interview Prep.md`)],
+    jd:       [path.join(rd, 'jd.md'),      path.join(dir, 'active', `${company} - JD.md`)],
+    overview: [path.join(cd, 'overview.md'), path.join(dir, `${company} - Company Overview.md`)],
+    prep:     [path.join(rd, 'prep.md'),     path.join(dir, `${company} - Interview Prep.md`)],
   };
 
   const result = {};
@@ -200,21 +233,22 @@ function backup(dir, filename) {
   const src = path.join(dir, filename);
   if (!fs.existsSync(src)) return;
 
-  const bDir = backupsPath(dir);
+  const bDir = backupsDir(dir);
   if (!fs.existsSync(bDir)) fs.mkdirSync(bDir, { recursive: true });
 
   const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
   const { name, ext } = path.parse(filename);
   fs.copyFileSync(src, path.join(bDir, `${name}.${ts}${ext}`));
 
-  // Prune to last 20
-  const keep = 20;
+  // Prune to last 20 backups
   const prefix = `${name}.`;
-  const old = fs.readdirSync(bDir)
+  const backups = fs.readdirSync(bDir)
     .filter(f => f.startsWith(prefix) && f.endsWith(ext))
     .sort();
-  while (old.length > keep) {
-    fs.unlinkSync(path.join(bDir, old.shift()));
+
+  const toRemove = backups.slice(0, Math.max(0, backups.length - 20));
+  for (const f of toRemove) {
+    fs.unlinkSync(path.join(bDir, f));
   }
 }
 
@@ -239,9 +273,9 @@ function validateDoc(doc) {
     }
   });
 
-  const ids = apps.map(a => a.id).filter(Boolean);
   const seen = new Set();
-  for (const id of ids) {
+  for (const { id } of apps) {
+    if (!id) continue;
     if (seen.has(id)) errors.push(`Duplicate id: ${id}`);
     seen.add(id);
   }
@@ -281,7 +315,8 @@ function moveFile(src, dest) {
   return true;
 }
 
-function escapeForScript(json) {
+/** Escape </script> for safe embedding inside HTML <script> tags. */
+function escapeHtmlScript(json) {
   return JSON.stringify(json).replace(/<\/script>/gi, '<\\/script>');
 }
 
@@ -289,8 +324,8 @@ function escapeForScript(json) {
 // Pure mutation functions (operate on in-memory doc, no I/O)
 //
 // Each returns the affected Application. They mutate doc.applications
-// in place — this is intentional since the doc is always read fresh
-// and written back as a unit.
+// in place — intentional since the doc is always read fresh and
+// written back as a unit.
 // ────────────────────────────────────────────────────────────────
 
 function addEntry(doc, entry) {
@@ -336,7 +371,6 @@ function declineEntry(doc, id, reason) {
 }
 
 function stageEntry(doc, id, stage) {
-  // Accept deprecated aliases
   const resolved = STAGE_ALIASES[stage] || stage;
   if (!VALID_STAGES.includes(resolved)) {
     throw new Error(`Invalid stage: "${stage}". Valid: ${VALID_STAGES.join(', ')}`);
@@ -354,7 +388,7 @@ function stageEntry(doc, id, stage) {
 }
 
 // ────────────────────────────────────────────────────────────────
-// Board generation (decomposed)
+// Board generation
 // ────────────────────────────────────────────────────────────────
 
 function enrichAppsWithDocFlags(dir, apps) {
@@ -389,36 +423,50 @@ function buildConfigData(dir) {
   return config;
 }
 
+/** Build document data map for embedding in the board HTML. */
 function buildDocumentData(dir, apps) {
   const data = {};
+  const overviewSeen = new Set();
+
   for (const app of apps) {
     const docs = resolveDocPaths(dir, app);
-    for (const key of ['jd', 'overview', 'prep']) {
+
+    // JD and prep are role-specific — key by app ID
+    for (const key of ['jd', 'prep']) {
       if (docs[`has_${key}`] && fs.existsSync(docs[key])) {
         data[`${app.id}::${key}`] = fs.readFileSync(docs[key], 'utf8');
       }
     }
+
+    // Overview is company-level — key by company name, read once per company
+    if (docs.has_overview && !overviewSeen.has(app.company)) {
+      overviewSeen.add(app.company);
+      if (fs.existsSync(docs.overview)) {
+        data[`${app.company}::overview`] = fs.readFileSync(docs.overview, 'utf8');
+      }
+    }
   }
+
   return data;
 }
 
-/** Build briefs data for embedding in the board. Returns array of {date, content}. */
+/** Load recent search briefs for embedding in the board. */
 function buildBriefsData(dir, limit = 15) {
-  const briefsDir = path.join(dir, 'briefs');
-  if (!fs.existsSync(briefsDir)) return [];
+  const briefsPath = path.join(dir, 'briefs');
+  if (!fs.existsSync(briefsPath)) return [];
 
-  return fs.readdirSync(briefsDir)
+  return fs.readdirSync(briefsPath)
     .filter(f => f.endsWith('.md'))
     .sort()
     .reverse()
     .slice(0, limit)
     .map(f => ({
       date: f.replace(/\.md$/, ''),
-      content: fs.readFileSync(path.join(briefsDir, f), 'utf8'),
+      content: fs.readFileSync(path.join(briefsPath, f), 'utf8'),
     }));
 }
 
-/** Migrate legacy flat files into companies/ structure. Returns count of moved files. */
+/** Migrate legacy flat files into companies/ structure. */
 function migrateFiles(dir, apps) {
   let count = 0;
   for (const app of apps) {
@@ -426,20 +474,72 @@ function migrateFiles(dir, apps) {
     const company = app.company || '';
     if (!company) continue;
 
-    const rd = roleDir(dir, app);
-    const cd = companyDir(dir, company);
+    const rd = roleDirPath(dir, app);
+    const cd = companyDirPath(dir, company);
 
     const moves = [
-      [path.join(dir, 'active',   `${company} - JD.md`),               path.join(rd, 'jd.md')],
-      [path.join(dir, 'declined', `${company} - JD.md`),               path.join(rd, 'jd.md')],
-      [path.join(dir, `${company} - Company Overview.md`),              path.join(cd, 'overview.md')],
-      [path.join(dir, `${company} - Interview Prep.md`),                path.join(rd, 'prep.md')],
+      [path.join(dir, 'active',   `${company} - JD.md`),    path.join(rd, 'jd.md')],
+      [path.join(dir, 'declined', `${company} - JD.md`),    path.join(rd, 'jd.md')],
+      [path.join(dir, `${company} - Company Overview.md`),   path.join(cd, 'overview.md')],
+      [path.join(dir, `${company} - Interview Prep.md`),     path.join(rd, 'prep.md')],
     ];
     for (const [src, dest] of moves) {
       if (moveFile(src, dest)) count++;
     }
   }
   return count;
+}
+
+/**
+ * Build the Kanban board HTML.
+ * @param {string} dir - Workspace directory
+ * @param {{ skipMigration?: boolean }} [options]
+ */
+function buildBoard(dir, options = {}) {
+  // Resolve template path: CLAUDE_PLUGIN_ROOT (set by Cowork) or relative to script
+  const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT || path.join(__dirname, '..');
+  const templatePath = path.join(pluginRoot, 'skills', 'board', 'references', 'board-template.html');
+  if (!fs.existsSync(templatePath)) throw new Error(`Template not found: ${templatePath}`);
+
+  const doc = readTracker(dir);
+
+  // Run stage migrations unless skipped (auto-rebuilds skip for speed)
+  if (!options.skipMigration) {
+    let needsWrite = false;
+    for (const app of doc.applications) {
+      const alias = STAGE_ALIASES[app.stage];
+      if (alias) { app.stage = alias; needsWrite = true; }
+    }
+    if (needsWrite) writeTracker(dir, doc);
+  }
+
+  const apps = doc.applications;
+
+  // Only read docs for active roles — terminal roles show metadata only
+  const activeApps  = apps.filter(a => !TERMINAL_STAGES.has(a.stage));
+  const terminalApps = apps.filter(a => TERMINAL_STAGES.has(a.stage));
+
+  const trackerData = [
+    ...enrichAppsWithDocFlags(dir, activeApps),
+    ...terminalApps.map(app => ({ ...app, has_jd: false, has_overview: false, has_prep: false })),
+  ];
+
+  const configData   = buildConfigData(dir);
+  const documentData = buildDocumentData(dir, activeApps);
+  const briefsData   = buildBriefsData(dir);
+
+  let html = fs.readFileSync(templatePath, 'utf8');
+  html = html.replace('__TRACKER_DATA__',  escapeHtmlScript(trackerData));
+  html = html.replace('__CONFIG_DATA__',   escapeHtmlScript(configData));
+  html = html.replace('__DOCUMENT_DATA__', escapeHtmlScript(documentData));
+  html = html.replace('__BRIEFS_DATA__',   escapeHtmlScript(briefsData));
+  html = html.replace(/__WORKSPACE_DIR__/g, path.resolve(dir));
+
+  const outDir = path.join(dir, 'Kanban');
+  ensureDir(outDir);
+  const outPath = path.join(outDir, 'index.html');
+  fs.writeFileSync(outPath, html, 'utf8');
+  return { built: outPath, roles: trackerData.length };
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -626,7 +726,7 @@ const commands = {
       content = args.content || '';
     }
 
-    const rd = roleDir(dir, app);
+    const rd = roleDirPath(dir, app);
     ensureDir(rd);
     const jdPath = path.join(rd, 'jd.md');
     fs.writeFileSync(jdPath, content, 'utf8');
@@ -650,9 +750,25 @@ const commands = {
     }
     if (stagesRenamed > 0) writeTracker(dir, doc);
 
-    // Migrate legacy file structure
+    // Migrate legacy flat files → companies/ structure
     const filesMoved = migrateFiles(dir, apps);
-    return { stages_renamed: stagesRenamed, files_moved: filesMoved };
+
+    // Migrate YYYY-MM-slug dirs → YYYY-MM-DD-slug
+    let dirsRenamed = 0;
+    for (const app of apps) {
+      const cd = companyDirPath(dir, app.company || 'Unknown');
+      const legacyName = legacyRoleDirName(app);
+      const newName = roleDirName(app);
+      if (legacyName === newName) continue;
+      const legacyPath = path.join(cd, legacyName);
+      const newPath = path.join(cd, newName);
+      if (fs.existsSync(legacyPath) && !fs.existsSync(newPath)) {
+        fs.renameSync(legacyPath, newPath);
+        dirsRenamed++;
+      }
+    }
+
+    return { stages_renamed: stagesRenamed, files_moved: filesMoved, dirs_renamed: dirsRenamed };
   },
 
   paths(dir, args) {
@@ -660,8 +776,8 @@ const commands = {
     const { app } = findApp(doc, args.id);
     const docs = resolveDocPaths(dir, app);
     return {
-      company_dir: companyDir(dir, app.company),
-      role_dir: roleDir(dir, app),
+      company_dir: companyDirPath(dir, app.company),
+      role_dir: roleDirPath(dir, app),
       ...docs,
     };
   },
@@ -670,21 +786,19 @@ const commands = {
     const apps = readTracker(dir).applications;
     const seen = new Set();
     const needs = [];
-    const skipStages = new Set(['declined', 'rejected', 'closed']);
 
-    // Only research companies with at least one active (non-terminal) role
     const activeCompanies = new Set(
-      apps.filter(a => a.company && !skipStages.has(a.stage)).map(a => a.company)
+      apps.filter(a => a.company && !TERMINAL_STAGES.has(a.stage)).map(a => a.company)
     );
 
     for (const company of activeCompanies) {
       if (seen.has(company)) continue;
       seen.add(company);
 
-      const overviewPath = path.join(companyDir(dir, company), 'overview.md');
+      const overviewPath = path.join(companyDirPath(dir, company), 'overview.md');
       if (!fs.existsSync(overviewPath)) {
-        const rep = apps.find(a => a.company === company);
-        needs.push({ company, id: rep.id, company_dir: companyDir(dir, company) });
+        const rep = apps.find(a => a.company === company && !TERMINAL_STAGES.has(a.stage));
+        needs.push({ company, id: rep.id, company_dir: companyDirPath(dir, company) });
       }
     }
     return { needs_research: needs, total_companies: seen.size };
@@ -701,96 +815,78 @@ const commands = {
     return enrichAppsWithDocFlags(dir, readTracker(dir).applications);
   },
 
+  'build-board'(dir) {
+    return buildBoard(dir);
+  },
+
   help() {
     return {
       commands: {
-        'Core CRUD':       ['list', 'get', 'add', 'update', 'decline', 'stage'],
-        'Batch':           ['batch', 'batch-decline', 'filter-candidates'],
-        'Files':           ['save-jd', 'migrate', 'paths', 'needs-research'],
-        'Board':           ['board-json', 'build-board', 'list-briefs'],
-        'Query':           ['count', 'find'],
-        'Housekeeping':    ['init', 'validate', 'add-decline-pattern', 'help'],
+        'Core CRUD':    ['list', 'get', 'add', 'update', 'decline', 'stage'],
+        'Batch':        ['batch', 'batch-decline', 'filter-candidates'],
+        'Files':        ['save-jd', 'migrate', 'paths', 'needs-research'],
+        'Board':        ['board-json', 'build-board', 'list-briefs'],
+        'Query':        ['count', 'find'],
+        'Housekeeping': ['init', 'validate', 'add-decline-pattern', 'help'],
       },
       stages: VALID_STAGES,
       transitions: STAGE_TRANSITIONS,
     };
   },
-
-  'build-board'(dir) {
-    const scriptDir = __dirname;
-    const templatePath = path.join(scriptDir, '..', 'skills', 'board', 'references', 'board-template.html');
-    if (!fs.existsSync(templatePath)) throw new Error(`Template not found: ${templatePath}`);
-
-    // Migrate legacy data (stage renames + file moves)
-    const doc = readTracker(dir);
-    let needsWrite = false;
-    for (const app of doc.applications) {
-      const alias = STAGE_ALIASES[app.stage];
-      if (alias) { app.stage = alias; needsWrite = true; }
-    }
-    if (needsWrite) writeTracker(dir, doc);
-    const apps = doc.applications;
-    migrateFiles(dir, apps);
-
-    const trackerData  = enrichAppsWithDocFlags(dir, apps);
-    const configData   = buildConfigData(dir);
-    const documentData = buildDocumentData(dir, apps);
-    const briefsData   = buildBriefsData(dir);
-
-    let html = fs.readFileSync(templatePath, 'utf8');
-    html = html.replace('__TRACKER_DATA__',  escapeForScript(trackerData));
-    html = html.replace('__CONFIG_DATA__',   escapeForScript(configData));
-    html = html.replace('__DOCUMENT_DATA__', escapeForScript(documentData));
-    html = html.replace('__BRIEFS_DATA__',   escapeForScript(briefsData));
-    html = html.replace(/__WORKSPACE_DIR__/g, path.resolve(dir));
-
-    const outDir = path.join(dir, 'Kanban');
-    ensureDir(outDir);
-    const outPath = path.join(outDir, 'index.html');
-    fs.writeFileSync(outPath, html, 'utf8');
-    return { built: outPath, roles: trackerData.length };
-  },
 };
 
-// Commands that mutate tracker.yaml and support --rebuild-board
+// Commands that mutate tracker.yaml and support auto board rebuild
 const MUTATING_COMMANDS = new Set([
   'add', 'update', 'decline', 'stage',
   'batch', 'batch-decline', 'add-decline-pattern',
 ]);
 
-// Required args per command (checked before dispatch)
+// Required args per command
 const REQUIRED_ARGS = {
-  get:                    ['id'],
-  add:                    ['json'],
-  update:                 ['id', 'json'],
-  decline:                ['id'],
-  stage:                  ['id', 'stage'],
-  find:                   ['company'],
-  'add-decline-pattern':  ['pattern'],
-  batch:                  ['json'],
-  'batch-decline':        ['ids'],
-  'filter-candidates':    ['json'],
-  'save-jd':              ['id'],
-  paths:                  ['id'],
+  get:                   ['id'],
+  add:                   ['json'],
+  update:                ['id', 'json'],
+  decline:               ['id'],
+  stage:                 ['id', 'stage'],
+  find:                  ['company'],
+  'add-decline-pattern': ['pattern'],
+  batch:                 ['json'],
+  'batch-decline':       ['ids'],
+  'filter-candidates':   ['json'],
+  'save-jd':             ['id'],
+  paths:                 ['id'],
 };
 
 // ────────────────────────────────────────────────────────────────
 // Main
 // ────────────────────────────────────────────────────────────────
 
+/** Walk up from cwd looking for tracker.yaml or profile.yaml. */
+function detectWorkspace() {
+  let dir = process.cwd();
+  const root = path.parse(dir).root;
+  while (dir !== root) {
+    if (fs.existsSync(path.join(dir, 'tracker.yaml')) ||
+        fs.existsSync(path.join(dir, 'profile.yaml'))) {
+      return dir;
+    }
+    dir = path.dirname(dir);
+  }
+  return process.cwd();
+}
+
 function main() {
   const args = parseArgs(process.argv);
-  const dir = args.dir || process.env.JFM_DIR || process.cwd();
+  const dir = args.dir || process.env.JFM_DIR || detectWorkspace();
   const cmd = args._command;
 
   const handler = cmd ? commands[cmd] : null;
   if (!handler) {
     console.error(cmd ? `Unknown command: ${cmd}` : 'No command specified');
-    console.error(`Run: node tracker.js help`);
+    console.error('Run: node tracker.js help');
     process.exit(1);
   }
 
-  // Check required args
   const required = REQUIRED_ARGS[cmd] || [];
   for (const key of required) {
     if (!args[key]) {
@@ -803,12 +899,10 @@ function main() {
     const result = handler(dir, args);
     console.log(JSON.stringify(result, null, 2));
 
-    // Rebuild board after mutating commands if requested
-    if (MUTATING_COMMANDS.has(cmd) && args['rebuild-board']) {
+    // Auto-rebuild board after mutations (pass --no-board to skip)
+    if (MUTATING_COMMANDS.has(cmd) && !args['no-board']) {
       try {
-        const boardResult = commands['build-board'](dir, args);
-        // Don't print board result — it would pollute the primary command's output
-        void boardResult;
+        buildBoard(dir, { skipMigration: true });
       } catch (err) {
         console.error(`Board rebuild warning: ${err.message}`);
       }

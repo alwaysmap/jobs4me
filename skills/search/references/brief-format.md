@@ -19,7 +19,7 @@ After each search sweep, write a brief to `briefs/{YYYY-MM-DD}.md` (or `{YYYY-MM
 {For each new role added to tracker as suggested:}
 
 ### {Company} — {Role Title}
-- **Archetype**: {archetype name}
+- **Role type**: {role type name}
 - **Recommendation**: {Strong/Moderate/Stretch}
 - **Key fit**: {one sentence on why it matches}
 - **Key concern**: {one sentence on the main gap, if any}
@@ -35,6 +35,18 @@ After each search sweep, write a brief to `briefs/{YYYY-MM-DD}.md` (or `{YYYY-MM
 | Company | Role | Reason Excluded |
 |---------|------|-----------------|
 | ... | ... | ... |
+
+## Sources Checked
+
+| Source | Type | Result |
+|--------|------|--------|
+| LinkedIn | job_board | 12 candidates |
+| Wellfound | job_board | 3 candidates |
+| Acme Corp careers | career_page | 0 — no matching roles |
+| a16z portfolio | org_portfolio | Checked 8 companies, 2 had matches |
+| HigherEdJobs | job_board | Error — timeout |
+
+{List every source checked, what type it is, and what happened. This helps the user debug thin results and know which sources are working.}
 
 ## Companies Confirmed with 0 Open Roles
 

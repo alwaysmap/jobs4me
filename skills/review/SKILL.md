@@ -16,9 +16,17 @@ user_summary: >
 
 # Review / Triage Session
 
-**Shell setup:** before running tracker commands, `export JFM_DIR='<workspace path>'` (single quotes). Then omit `--dir` from commands. See `search/references/data-safety.md`.
+**Shell setup:** The tracker script auto-detects the workspace directory. If needed, set `JFM_DIR` environment variable or use `--dir`.
 
 Walk the user through their tracked roles one at a time, grouped by what needs attention. This is a conversational triage — present a role, get a quick decision, apply it, kick off background work, move on.
+
+## First Review Calibration
+
+Before starting, check if all roles in `tracker.yaml` have `stage: suggested` (no roles in maybe, applied, interviewing, or other non-suggested stages). If so, this is likely the user's first review session. Frame it as calibration:
+
+> "This first review helps me learn what you actually want. For each role, tell me what you think — your reactions help the agent get smarter. Be honest about why you like or dislike each one."
+
+This sets the expectation that their feedback is training data, not just triage.
 
 ## Arguments
 
@@ -76,7 +84,7 @@ When a stage filter is used, show **all** roles in that stage (not just stale on
 For each role, show a compact card:
 
 > **{Company}** — {Role Title}
-> {archetype tag} · identified {date}
+> {role type tag} · identified {date}
 > {First 2-3 lines of agent_summary, focusing on the Recommendation line}
 >
 > [Job posting]({url})
@@ -99,7 +107,7 @@ Keep it tight — the user should be able to make a snap decision from this. Don
 
 After each decision:
 
-1. Apply the change via tracker.js **without** `--rebuild-board` during the review session — the board will be rebuilt once at the end
+1. Apply the change via tracker.js — let the board auto-rebuild on each mutation (it takes ~1 second). This way the user can refresh `Kanban/index.html` at any point during the review and see current state.
 2. If declining, extract the reason and consider whether it should become a decline pattern (see `search/references/decline-learning.md`). Add one if the reason is generalizable and meaningfully different from existing patterns.
 3. **If the decision triggers background work, launch it as a sub-agent** (see Background Work below)
 4. Acknowledge briefly — one line max — then immediately present the next role
@@ -108,15 +116,15 @@ After each decision:
 
 When the user says **"decline all remaining suggestions"** or **"skip the rest"**, use `batch-decline` for all affected IDs in one call:
 ```bash
-node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js batch-decline --ids id1,id2,id3 --reason "reason" --dir . --rebuild-board
+node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js batch-decline --ids id1,id2,id3 --reason "reason"
 ```
 
 For mixed operations (e.g., "advance these three, decline the rest"), use the `batch` command:
 ```bash
-node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js batch --dir . --rebuild-board --json '[{"op":"stage","id":"acme-vp-eng","stage":"maybe"},{"op":"decline","id":"bigco-tpm","reason":"too enterprise"}]'
+node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js batch --json '[{"op":"stage","id":"acme-vp-eng","stage":"maybe"},{"op":"decline","id":"bigco-tpm","reason":"too enterprise"}]'
 ```
 
-These write `tracker.yaml` exactly once and rebuild the board exactly once, regardless of how many roles are changed.
+These write `tracker.yaml` once and auto-rebuild the board.
 
 **Good flow:**
 > **Acme Corp** — VP Engineering
@@ -143,45 +151,44 @@ User: "advance" (on a role currently in Applied)
 
 Keep the momentum. The whole point is speed.
 
-## Background Work via Sub-Agents
+## Follow-Up Work
 
-When a decision implies follow-up work, launch it as a sub-agent so the review session keeps moving. The user should never have to wait for research to finish before seeing the next card.
+Some decisions trigger follow-up work (company research, interview prep). In Cowork, there are no background agents — all work happens inline. Design the review flow to **defer heavy work** and keep the triage fast.
 
-| Decision | Background work |
+| Decision | What to do |
 |---|---|
-| **Any stage change** and no Company Overview exists | Launch sub-agent: generate Company Overview to `{company_dir}/overview.md` (see prep skill's "Company Overview" section). Check with `tracker.js needs-research`. One overview per company, shared across roles. |
-| Move to **Interviewing** | Launch sub-agent: generate Interview Prep docs (prep skill). Company Overview will already exist from the step above. |
-| Move to **Maybe** and JD not yet saved | Launch sub-agent: fetch the job posting URL, save JD to `{role_dir}/jd.md` (use `tracker.js paths` to get the path) |
-| User says **"tell me more"** and no Company Overview exists | Launch sub-agent: quick company research (just the overview, not full interview prep) |
+| Move to **Maybe** | Just move the stage. No research needed yet — the user is just expressing interest. |
+| Move to **Maybe** and JD not yet saved | Fetch the JD and save it (quick — one web fetch). Then continue the review. |
+| Move to **Interviewing** | Move the stage, then **after the review session ends**, offer to run `/prep` for that company. Don't do it inline during review. |
+| User says **"tell me more"** | Show the full `agent_summary` and any existing overview. If no overview exists, say so: "No company research yet — I can generate it after we finish the review, or you can run `/prep {company}` later." |
 
-### How to launch background work
+The key principle: **the review session is for decisions, not research**. Keep cards moving. Defer research to `/prep` or to the end of the session.
 
-Use the Agent tool to spawn a sub-agent for each background task. Give it a clear, self-contained prompt with everything it needs — the skill to use, the company name, the workspace path, the file paths. The sub-agent should write its output files directly to the workspace.
+### After the review, if companies need research
 
-**Example — launching interview prep in background:**
-> Spawn a sub-agent with prompt:
-> "Read the prep skill at {skill path}. Generate Company Overview and Interview Prep documents for {Company} — {Role}. The JD is at {jd path}. Profile is at {profile path}. Write outputs to {workspace path}. Update tracker.yaml to stage: interviewing for this role."
+At the end of the review, check if any newly-advanced companies need overviews:
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js needs-research
+```
 
-Don't wait for the sub-agent to finish. Acknowledge the launch and move to the next card:
+If there are companies needing research, offer to do it:
+> {N} companies need research (Oracle, Databricks). Want me to generate company overviews now, or would you rather do it later with `/prep`?
 
-> Moved to Interviewing. Research docs generating in the background. **Next:**
+If yes, generate overviews inline with progress updates. After each overview is written, show the user what was created:
+> **Oracle — Company Overview** — `companies/Oracle/overview.md`
+> {2-3 line summary: what they do, market position, why this role exists}
 
-### When background work finishes
-
-If a sub-agent finishes while the review is still going, **don't interrupt the flow**. Note the completion silently and include it in the end-of-review summary.
-
-If the review is already over by the time it finishes, mention it:
-
-> Your interview prep for Acme Corp is ready — `Acme Corp - Company Overview.md` and `Acme Corp - Interview Prep.md` are in your folder.
+If the user moved any role to Interviewing, also offer full interview prep via `/prep`.
 
 ## "Tell me more"
 
 If the user says "tell me more" or "details" or "expand":
 
 1. Show the full `agent_summary`
-2. If there's a saved JD in `active/`, mention it
-3. If no Company Overview exists yet, launch one in the background
-4. After they've read it, re-prompt for a decision:
+2. If there's a saved JD, mention it and offer to show key sections
+3. If a Company Overview exists, show a 2-3 line summary from it
+4. If no Company Overview exists, note it: "No company research yet — I can do that after we finish reviewing, or you can run `/prep {company}` later."
+5. Re-prompt for a decision:
 
 > What's the call — interested, decline, or skip for now?
 
@@ -214,13 +221,11 @@ After the last role (or when the user says "done" / "that's enough"):
 > - BigCo — company overview ✓ ready
 > - StartupX — interview prep ⏳ still generating
 
-2. **Rebuild the board once** at the end of the review session:
-   ```bash
-   node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js build-board --dir .
-   ```
-   Individual mutations during the session skip `--rebuild-board` to avoid N redundant rebuilds. This single final rebuild picks up all changes.
+2. The board has been auto-rebuilt after each decision throughout the session. Tell the user:
 
-3. If there are roles in Maybe that have been there a while, offer a gentle nudge:
+> Your board is up to date — refresh `Kanban/index.html` to see all changes.
+
+4. If there are roles in Maybe that have been there a while, offer a gentle nudge:
 
 > You've got {N} roles sitting in Maybe. Want to do a quick `/review maybe` to advance or prune them?
 

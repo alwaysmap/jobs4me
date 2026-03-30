@@ -2,10 +2,10 @@
 name: setup
 description: >
   Use this skill when the user says "set up my job search", "get started",
-  "configure the agent", "onboarding", or uses /setup. Walks through guided
-  onboarding: profile creation, career evidence, role archetypes, target companies,
-  search sources, and a first search sweep. Also use when the user wants to
-  start fresh or redo their setup from scratch.
+  "configure the agent", "onboarding", or uses /setup. On first run, walks
+  through onboarding with a choice of full or quick setup. On subsequent runs,
+  detects existing config and behaves like /tweak — helping the user complete
+  or adjust their setup rather than starting from scratch.
 user_summary: >
   Set up your job search profile — your background, the kinds of roles you want,
   target companies, and where to look. Run this once to get started.
@@ -15,31 +15,112 @@ user_summary: >
 
 Walk the user through setting up their job search agent. This is a conversational onboarding — ask questions, listen, extract structure from their answers. Do not present forms or dump all questions at once.
 
-## Phase 1: Evidence — "Tell me about yourself"
+## First Run vs. Returning User
 
-Start with:
+**Before anything else**, check whether `profile.yaml` exists in the workspace.
 
-> I'm going to help you set up a job search agent that finds roles for you and learns what you actually want. First, I need to understand your background.
+- **If `profile.yaml` does NOT exist** → this is a first-time setup. Proceed to "Welcome & Setup Choice" below.
+- **If `profile.yaml` exists** → this is a returning user. Do NOT restart onboarding. Instead, read `profile.yaml`, `archetypes.yaml`, and `filters.yaml`, identify what's missing or incomplete, and offer to help fill the gaps — just like `/tweak`. Say:
+
+> Welcome back! You already have a profile set up. Let me check what's in place and what could use attention.
+>
+> {Summary of current state: profile ✓, role types ✓/✗, companies ✓/✗, sources ✓/✗, evidence_complete true/false}
+>
+> What would you like to update or complete? You can also just tell me what you need — "add a new role type", "change my sources", "update my comp floor" — and I'll handle it.
+
+Then behave exactly like the tweak skill. Do not re-ask onboarding questions for sections that are already complete.
+
+---
+
+## Welcome & Setup Choice
+
+This is the very first message the user sees. It MUST present the two setup paths as a clear choice.
+
+> **Welcome to Jobs For Me!** I'm going to set up a job search agent that finds roles for you and learns what you actually want.
+>
+> There are two ways to get started:
+>
+> **1. Full setup** (recommended, ~10 minutes) — I'll interview you about your background, preferences, target role types, dream companies, and search sources. This gives the agent the most to work with from day one.
+>
+> **2. Quick start** (~3 minutes) — Just give me your resume and a short description of the kinds of roles you're interested in. I'll infer the rest and you can refine later with `/tweak`.
+>
+> Everything is adjustable after either path — nothing is permanent. Which would you prefer?
+
+Wait for their answer. Then proceed to the matching path.
+
+---
+
+## Quick Start Path
+
+### Quick start — Step 1 of 3: Your background
+
+> **Quick start — Step 1 of 3: Your background**
+>
+> Share your resume — a link, pasted text, or just tell me about your career. Whatever's easiest.
+
+Process their input (fetch URL, parse text, etc.). Write `profile.yaml` with what you can extract.
+
+### Quick start — Step 2 of 3: What kinds of roles?
+
+> **Quick start — Step 2 of 3: What kinds of roles?**
+>
+> Describe the types of roles you're looking for. A sentence or two is fine — for example: "VP of Engineering at mid-stage startups" or "Director-level program management, remote, $200K+".
+
+From their description, generate full role type entries. Each role type MUST include:
+- `key` — kebab-case identifier
+- `name` — human-readable name
+- `titles` — 4-6 target job title variations
+- `keywords` — search keywords for job boards
+- `experience_mapping` — a paragraph mapping the user's resume experience to this role type
+- `company_fit` — company size/type preference (inferred from their description)
+
+Write `archetypes.yaml` with the same schema as the full setup. The quick start must produce data that is complete enough for the search skill to use immediately. Set reasonable defaults for preferences based on whatever they've shared.
+
+### Quick start — Step 3 of 3: Where to search
+
+> **Quick start — Step 3 of 3: Where to search**
+>
+> Based on your background in [field], I'd suggest starting with: **[Source 1]**, **[Source 2]**, and **[Source 3]**. Want me to add any others, or shall we go with these?
+
+By this point you know the user's background and target roles. Suggest 3-5 specific sources tailored to their field (see "Tailored Source Suggestions" below). Write `filters.yaml` with their sources.
+
+> **Setup complete!** I've got your profile, role types, and sources configured. You can refine any of this later with `/tweak` — add dream companies, more sources, career evidence, or adjust your preferences.
+
+Proceed to "First Search Offer" below.
+
+---
+
+## Full Setup Path
+
+Walk through 5 steps. **Every step transition MUST include the step indicator** so the user always knows where they are and how much is left.
+
+### Step 1 of 5: Your background
+
+> **Step 1 of 5: Your background**
 >
 > You can give me a link to your resume or LinkedIn, paste your resume text, or just tell me about your career in your own words. Whatever's easiest.
 >
-> Don't worry about getting everything perfect right now — everything we set up here can be changed later. You can always come back and refine things with `/tweak`.
+> Don't worry about getting everything perfect — everything here can be changed later with `/tweak`.
 
 Read whatever they provide. If it's a URL, fetch it. If it's pasted text, parse it.
 
-**CRITICAL: ONE QUESTION AT A TIME.** After reading their background, ask a single follow-up question. Wait for their answer. Then ask the next one. Never batch multiple questions into one message. This is a conversation, not a survey.
+**CRITICAL: ONE QUESTION AT A TIME.** Ask a single follow-up, wait, acknowledge, then ask the next. Never batch questions.
 
-Follow-ups to ask (one per message, in this order, skip any the resume already answers clearly):
+After reading their resume, ask follow-ups from this list. **Tell the user how many questions are left** so they know the pace. Skip any the resume already answers clearly.
 
-1. What level of role are you targeting? (Director, VP, Head-of, etc.)
-2. What's your minimum acceptable base compensation?
-3. Where are you willing to work? (Remote, hybrid, specific cities?)
-4. How much travel is too much?
-5. Any industries or types of companies that are a hard no?
+1. "Quick follow-up (I have up to 5 short questions, but I'll skip any your resume already answered) — What level of role are you targeting? Director, VP, Head-of?"
+2. "Got it. What's your minimum acceptable base compensation?"
+3. "Where are you willing to work? Remote, hybrid, specific cities?"
+4. "How much travel is too much?"
+5. "Last one — any industries or types of companies that are a hard no?"
 
-After each answer, briefly acknowledge it before asking the next question. For example: "Got it — VP or Head-of level, no interest in going back to IC. Next question:..."
+After each answer, acknowledge briefly: "Got it — VP or Head-of level. Next question:..."
 
-Write the results to `profile.yaml` using this schema:
+When done, confirm:
+
+> **Profile saved.** Moving on to career evidence...
+
+Write `profile.yaml`:
 
 ```yaml
 name: "{Full Name}"
@@ -64,189 +145,152 @@ preferences:
   seniority_floor: "{director, vp, manager, etc.}"
 ```
 
-## Phase 2: Evidence — "What makes you stand out?"
+### Step 2 of 5: Career evidence
 
-After capturing the resume basics, ask about additional evidence that goes beyond the resume. Frame it as optional but valuable:
-
-> Your resume gives me the career arc, but the stuff that really sets you apart in assessments is evidence of impact — projects, writing, talks, open source work, anything where someone can see what you actually *do*.
+> **Step 2 of 5: Career evidence** (optional — skip if you'd rather come back later)
 >
-> Some examples:
-> - **Portfolio or project write-ups** — "I built X that did Y" with links
-> - **Open source contributions** — GitHub repos, PRs, maintained projects
-> - **Talks, writing, or teaching** — blog posts, conference talks, courses you taught
-> - **Competitions or awards** — hackathons, design competitions, certifications
-> - **Case studies in your own words** — even without a public link, describe a problem you solved, what you personally did, and the measurable outcome
+> Your resume gives me the career arc. The stuff that really helps in assessments is evidence of impact — projects, writing, talks, anything where someone can see what you actually *do*.
 >
-> You can share URLs, paste text, or just tell me about them. Skip for now if you'd rather come back to this later — just say `/tweak` any time to add more.
+> Some examples: portfolio links, open source repos, blog posts, talks, or just describe a project in your own words.
+>
+> Share what you have, or say "skip" to move on. You can always add this later with `/tweak`.
 
-For each piece of evidence they share:
-- If it's a URL, fetch it and extract the key points
-- If it's a narrative, extract the structured insight (situation -> action -> outcome)
-- Tag each piece with the skills/themes it demonstrates (e.g., "team building", "technical architecture", "stakeholder management", "shipping under constraints")
+For each piece of evidence:
+- URL → fetch and extract key points
+- Narrative → extract situation → action → outcome
+- Tag with skills/themes
 
-Add everything to `profile.yaml` under the evidence section:
-
+Add to `profile.yaml` evidence section. If they skip:
 ```yaml
 evidence:
-  resume_url: "{URL}"
-  portfolio_urls:
-    - url: "{URL}"
-      description: "{what it demonstrates}"
-    - url: "{URL}"
-      description: "{what it demonstrates}"
-  case_studies:
-    - title: "{short title}"
-      situation: "{context}"
-      action: "{what they personally did}"
-      outcome: "{measurable result}"
-      tags:
-        - "{skill/theme}"
-  additional_context: |
-    {career narrative}
+  evidence_complete: false
 ```
 
-If they skip, note that in profile.yaml:
-```yaml
-evidence:
-  resume_url: "{URL}"
-  evidence_complete: false  # remind to add via /tweak later
-```
+> Totally fine. You can add evidence anytime with `/tweak`. Moving on...
 
-Reassure them:
+### Step 3 of 5: Role types
 
-> Totally fine to skip this for now. You can always run `/tweak` later to add projects, write-ups, or stories. The agent works with just a resume — the extra evidence just makes it sharper.
+> **Step 3 of 5: Role types**
+>
+> Based on your background, here are the types of roles I think you'd be strong for:
 
-## Phase 3: Archetypes — "What kind of roles fit you?"
-
-Based on their background, propose 2-4 role archetypes. Explain what an archetype is in plain terms:
-
-> Based on your background, I can see a few different types of roles you'd be strong for. Let me suggest some — you can adjust, remove, or add to these.
-
-For each archetype, draft:
+Propose 2-4 role types. For each, draft:
 - A name and key
 - 4-6 target job titles
 - Search keywords
-- A paragraph mapping their specific experience to this role type
+- Experience mapping paragraph
 - Company size/type preference
 
-Ask the user to confirm, edit, or add. Then write `archetypes.yaml`.
+Present them clearly and ask:
 
-Reassure them:
+> Do these look right? You can edit, remove, or add more. Say "looks good" to continue.
 
-> These archetypes aren't set in stone. As you use the agent and see what it finds, you might want to add a new one or retire one that isn't landing. Just say `/tweak` any time to adjust.
+Write `archetypes.yaml` after confirmation.
 
-## Phase 4: Companies — "Who do you want to work for?"
+> **Role types saved.** Two more steps...
 
-Ask about target companies and exclusions. This is its own question — don't combine it with sources.
+### Step 4 of 5: Target companies
 
-> Are there specific companies you'd love to work for? Dream list, aspirational targets, companies you've been watching — anything that comes to mind.
-
-Wait for their answer, then ask the flip side:
-
-> And on the other side — any companies you'd want to skip? Former employers you wouldn't go back to, companies with cultures you know don't fit, types of companies to avoid?
-
-Capture both lists. If they can't think of many, reassure them:
-
-> No pressure to have a long list. Companies will surface naturally as the agent runs searches — you can always add a dream company later with `/tweak`, or use `/assess` to evaluate a specific posting you find on your own.
-
-## Phase 5: Sources — "Where should I look?"
-
-This is a separate question from companies. Help the user think broadly about where good roles get posted:
-
-> Now let's talk about where to search. The obvious ones are LinkedIn and Indeed, but the best leads often come from less obvious places.
+> **Step 4 of 5: Target companies**
 >
-> Each source works a little differently — **job boards** and **aggregators** get searched with your role keywords, **portfolio/directory sites** get scanned to discover companies whose career pages I then check individually, and **career pages** get checked directly for matching roles.
+> Are there specific companies you'd love to work for? Dream list, aspirational targets, companies you've been watching?
+
+Wait for answer. Then:
+
+> Any companies to skip? Former employers, bad cultures, types to avoid?
+
+Capture both. If they can't think of many:
+
+> No pressure — companies will surface as the agent searches. You can add dream companies anytime with `/tweak`.
+
+### Step 5 of 5: Search sources
+
+> **Step 5 of 5: Search sources — last step!**
+
+Present tailored source suggestions (see below). Then:
+
+> Want to add any others, or shall we go with these?
+
+Write `filters.yaml`.
+
+> **Setup complete!** Your profile, role types, companies, and sources are all configured. Everything is adjustable later with `/tweak`.
+
+---
+
+## Tailored Source Suggestions
+
+By Phase 5 (or Quick Start Step 3), you know the user's field. Instead of dumping every possible source, suggest 3-5 specific ones:
+
+- **Tech:** LinkedIn, Wellfound, Hacker News Who's Hiring, relevant VC portfolio pages
+- **Nonprofit:** Idealist.org, LinkedIn, Foundation Center, relevant association job boards
+- **Healthcare:** Health eCareers, LinkedIn, hospital system career pages
+- **Academia:** HigherEdJobs, Chronicle Vitae, university system portals
+- **Government:** USAJOBS, governmentjobs.com, LinkedIn
+- **General/mixed:** LinkedIn, Indeed, Glassdoor
+
+Always include LinkedIn as a default. Let them add more with `/tweak`.
+
+---
+
+## First Search Offer
+
+This phase is shared by both paths. After setup is complete:
+
+> Want me to run a first search now?
 >
-> Some ideas by category:
+> **Heads up:** The first search takes longer than future ones — expect around **20 minutes**. I'm checking all your sources, assessing each role against your profile, and building your initial board. Future searches are faster because I already know what to skip.
 >
-> - **Job boards** — LinkedIn, Indeed, plus boards specific to your field: Wellfound or Hacker News "Who's Hiring" (startups/tech), HigherEdJobs or Chronicle Vitae (academia), Idealist.org (nonprofit/social impact), USAJOBS or governmentjobs.com (public sector), Health eCareers or hospital system job portals (healthcare)
-> - **Organization portfolios & directories** — sites that list a cluster of employers you'd want to work for. In tech, that's VC portfolio pages like a16z.com/portfolio. In academia, it might be an AAU member list or a specific university system's jobs portal. In healthcare, a regional health system's affiliated hospitals. In social services, a state agency directory or a foundation's grantee list. The key: any page that lists organizations where matching roles might exist.
-> - **Company career pages** — if there are specific employers on your dream list, I'll check their careers pages directly
-> - **Curated lists** — "Best Places to Work" lists, industry association member directories, conference sponsor lists, "Top 50 Nonprofits" lists, Carnegie Classification lists for universities, etc.
-> - **Aggregators** — Glassdoor, Builtin, or field-specific aggregators like SchoolSpring (education), Social Work Job Bank, or your city/region's job board
->
-> What sources make sense for your field? And are there any industry sites, professional associations, or employer directories where the right kind of organizations tend to cluster?
+> You can start the search now and do something else while it runs, or come back later and run `/search` when you're ready.
 
-If they're unsure, reassure:
+If yes, initialize the tracker (the script auto-installs dependencies on first run):
 
-> You can start with the obvious ones and add more later with `/tweak`. People often discover great sources after the first few searches — maybe a professional association directory that keeps surfacing good employers, or a niche job board a colleague mentions. Easy to add as you go.
-
-Write both phases into `filters.yaml`:
-
-```yaml
-include:
-  target_companies:
-    - "{company name}"
-  sources:
-    - name: "{source name}"
-      url: "{URL}"
-      type: "{job_board | org_portfolio | career_page | curated_list | aggregator}"
-      # job_board / aggregator: searched with archetype keywords + location
-      # org_portfolio / curated_list: scanned for employer names, then each employer's career page is checked
-      # career_page: checked directly for matching roles
-skip:
-  - "{company or pattern to avoid}"
-watch:
-  - "{company to keep an eye on but not actively search}"
-decline_patterns: []
-```
-
-## Phase 6: First Run — "Let's see what's out there"
-
-> Your agent is set up! Want me to run a first search right now so you can see what it finds?
-
-If they say yes, initialize the tracker:
 ```bash
-node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js init --dir .
+node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js init
 ```
 
 Create empty directories: `active/`, `declined/`, `briefs/`
 
-Then trigger the search skill to run a sweep. Show results and let them decline the bad ones — each decline uses the tracker script and teaches the filter.
+Then trigger the search skill. After the sweep completes:
 
-After the first sweep, **always generate `Kanban/index.html`** and tell the user to open it:
+> **Found {N} roles** that look like potential matches. Your board is ready — open `Kanban/index.html` to see them.
+>
+> Want to walk through them now? I'll show each one and you can tell me yes, no, or skip. This first review helps me learn what you actually want — your reactions make future searches better.
 
-> Open the `Kanban/` folder in your browser — that's your kanban board with everything we just found.
+If yes, trigger the review skill with calibration framing.
 
-## Phase 7: What's Next — "Here's how to use this day-to-day"
+---
 
-After the first run, walk the user through what they can do going forward. This is critical — don't skip it.
+## What's Next
+
+After the first run (or if the user defers the search), **always show this guidance.** This is not optional — it's how people learn to use the product.
 
 > You're all set! Here's how this works day to day:
 >
-> **`/search`** — runs a new search sweep. The agent checks your sources, finds matching roles, and adds good ones to your board. You can run this whenever you want, or I can run it on a schedule.
+> **`/search`** — runs a new search sweep. You can run it whenever you want, or set it on a schedule.
 >
-> **`/update`** — when something happens with a role. Just type `/update` by itself and I'll show you your active roles to pick from. Or go direct: `/update Acme - interviewing`, `/update Acme - decline too much travel`, `/update Acme - rejected`. I'll learn from your declines to filter better next time.
+> **`/review`** — walk through new suggestions and decide on each one.
 >
-> Roles move through these stages:
-> - **Suggested** -> the agent found it and thinks it's a fit
-> - **Maybe** -> you're interested and considering applying
-> - **Applied** -> you've submitted an application
-> - **Interviewing** -> you're in the interview process
-> - **Offered** -> you have an offer
-> - **Declined** -> you passed on it (with a reason that helps the agent learn)
-> - **Rejected** / **Closed** -> they passed on you, or the role disappeared
+> **`/update`** — move a single role through stages. `/update Acme - interviewing`, `/update Acme - decline too much travel`.
 >
-> **`/assess`** — found a job posting on your own? Paste the URL and I'll evaluate it against your profile.
+> **`/assess`** — found a posting on your own? Paste the URL and I'll evaluate it.
 >
-> **`/prep`** — preparing for an interview? I'll research the company and map your experience to their requirements.
+> **`/prep`** — preparing for an interview? I'll research the company and map your experience.
 >
-> **`/board`** — regenerate your kanban board. It only rebuilds when the data has changed, so it's fast to run anytime.
+> **`/tweak`** — change anything about your setup. Nothing is locked in.
 >
-> **`/tweak`** — change anything about your setup. Add a company to watch, a new source to search, update your preferences, add career evidence. Nothing is locked in.
+> Run `/setup` again anytime — it'll check what's in place and help you fill gaps (same as `/tweak`).
 >
-> And if you want to start fresh on any part of the setup, just run `/setup` again — it'll walk you through the same process and update your files.
->
-> **Set up automated search:** You can schedule `/search` to run automatically — daily, twice a day, whatever cadence makes sense. Go to the scheduled tasks menu (clock icon in the sidebar), create a new task, pick the Jobsbyme `/search` command, and set your frequency. New roles show up on your board without you lifting a finger.
->
-> **Back up your data:** Keep your job search folder in a synced location (Google Drive, Dropbox, iCloud) so your data is backed up automatically. Everything is plain YAML and markdown files — easy to back up, easy to read, and yours to keep.
+> **Automate it:** Schedule `/search` to run daily using the scheduled tasks menu (clock icon). New roles show up on your board without you lifting a finger.
 
-## Important
+---
 
-- **ONE QUESTION PER MESSAGE. This is the #1 rule.** Never ask two questions in the same message. Ask, wait, acknowledge, then ask the next. This applies to every phase, not just Phase 1.
-- Be conversational, not robotic. This is a guided setup, not a form or a survey.
-- If the user seems unsure about something, help them think through it before moving on.
-- This whole setup should feel like 15 minutes, not an hour.
-- **Reassurance is key.** At every phase, the user should feel like they can move forward even with incomplete answers. Reference `/tweak` and `/assess` so they see the escape hatches.
-- Never make the user feel like they need to have everything figured out before the agent can help them.
-- **The post-setup guidance in Phase 7 is not optional.** This is how people learn to use the product. Always show it after the first run.
+## Rules
+
+- **ONE QUESTION PER MESSAGE.** Never ask two questions in the same message. Ask, wait, acknowledge, then ask the next.
+- **Step indicators are REQUIRED.** Every step transition must show where the user is (e.g., "Step 3 of 5"). Never skip these.
+- **Sub-progress on multi-question steps.** When Phase 1 has multiple follow-ups, tell the user how many are left. "3 more quick questions..."
+- **The setup choice (full vs quick) is REQUIRED** on first run. Never skip straight to questions.
+- **The first-search time warning is REQUIRED.** Never let the user start a search without knowing it takes ~20 minutes.
+- Be conversational, not robotic. Acknowledge before moving on.
+- **Reassurance at every step.** Reference `/tweak` so they know nothing is permanent.
+- **The What's Next section is REQUIRED.** Always show it after the first run or if the user defers the search.

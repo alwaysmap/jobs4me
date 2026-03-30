@@ -1,0 +1,10 @@
+{
+  "name": "jobs-for-me",
+  "version": "0.5.2",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.js",
+    "release": "node scripts/release.js"
+  }
+}

@@ -6,26 +6,27 @@
 
 Location: `${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js`
 
-Run via Bash. The workspace directory can be set three ways (in priority order):
+Run via Bash. The script auto-detects the workspace by walking up from the current directory looking for `tracker.yaml` or `profile.yaml`. It also auto-installs npm dependencies on first run.
+
+The workspace directory can be set explicitly if needed (in priority order):
 
 1. **`--dir <path>`** flag on each command
 2. **`JFM_DIR` environment variable** — set once, all commands pick it up
-3. **Current working directory** as fallback
+3. **Auto-detection** — walks up from cwd looking for `tracker.yaml` or `profile.yaml`
 
-**Use `JFM_DIR` when the workspace path contains special shell characters** (`!`, `$`, `#`, spaces, etc.). Set it once with single quotes to prevent shell expansion:
+**Use `JFM_DIR` only when the workspace path contains special shell characters** (`!`, `$`, `#`, spaces, etc.):
 
 ```bash
 export JFM_DIR='/path/to/My Project!'
-node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js list
-node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js count
-# No --dir needed — JFM_DIR handles it
 ```
 
-For paths without special characters, `--dir .` is fine:
+For most cases, just run commands directly — no `--dir` needed:
 
 ```bash
-node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js <command> --dir . [options]
+node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js <command> [options]
 ```
+
+**Board auto-rebuild:** All mutating commands automatically rebuild `Kanban/index.html` after every change. Pass `--no-board` to skip this during batch operations where you want one rebuild at the end.
 
 ## Commands
 
@@ -33,23 +34,17 @@ node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js <command> --dir . [options]
 
 ```bash
 # List all applications as JSON
-node tracker.js list --dir .
-
+node tracker.js list
 # Get one application by id
-node tracker.js get --id acme-corp-director-of-tpm --dir .
-
+node tracker.js get --id acme-corp-director-of-tpm
 # Find by company name (fuzzy match)
-node tracker.js find --company "Acme" --dir .
-
+node tracker.js find --company "Acme"
 # Count by stage
-node tracker.js count --dir .
-
+node tracker.js count
 # Export JSON for board template injection
-node tracker.js board-json --dir .
-
+node tracker.js board-json
 # Validate the tracker file
-node tracker.js validate --dir .
-```
+node tracker.js validate```
 
 ### Writing
 
@@ -61,14 +56,11 @@ node tracker.js add --dir . --json '{"company":"Acme Corp","role":"Director of T
 node tracker.js update --id acme-corp-director-of-tpm --dir . --json '{"notes":"Phone screen went well","stage":"interviewing"}'
 
 # Change stage only
-node tracker.js stage --id acme-corp-director-of-tpm --stage applied --dir .
-
+node tracker.js stage --id acme-corp-director-of-tpm --stage applied
 # Decline with a reason
-node tracker.js decline --id acme-corp-director-of-tpm --reason "40% travel required" --dir .
-
+node tracker.js decline --id acme-corp-director-of-tpm --reason "40% travel required"
 # Initialize an empty tracker
-node tracker.js init --dir .
-
+node tracker.js init
 # Add a decline pattern to filters.yaml
 node tracker.js add-decline-pattern --dir . --pattern "Travel > 15%" --learned-from "BigCo (40% travel)"
 ```
@@ -79,7 +71,8 @@ Every mutating command:
 
 1. **Backs up** the current file to `.backups/` with a timestamp (keeps last 20)
 2. **Validates** after writing — checks entry count, required fields, valid stages, no duplicate ids
-3. **Returns** the affected entry as JSON to stdout (parseable by Claude)
+3. **Rebuilds `Kanban/index.html`** automatically (pass `--no-board` to skip during batch operations)
+4. **Returns** the affected entry as JSON to stdout (parseable by Claude)
 
 ## What Claude Should Do
 
@@ -105,3 +98,22 @@ These files are written infrequently and have simple schemas:
 
 - `tracker.yaml` — always use tracker.js
 - `filters.yaml` — use tracker.js for decline_patterns; other filter changes are rare enough to be acceptable via Edit tool with care
+
+## Surfacing Created Files
+
+**REQUIRED: Every time you create or update a document, show the user what was created.** Never silently write a file. After writing any document (overview, prep, JD, cover letter, brief), tell the user:
+
+1. **What was created** — document type and a 2-3 line summary of the content
+2. **Where it lives** — the file path so they can find it
+3. **How to access it** — mention the board if the doc is viewable there
+
+Example:
+> **Company Overview** — `companies/Oracle/overview.md`
+> Oracle is a $50B enterprise cloud + database company pivoting hard to AI infrastructure. Strong engineering culture in the cloud org. This role exists because they're scaling their strategic customers team.
+>
+> **Interview Prep** — `companies/Oracle/2026-03-30-sr-principal-tpm/prep.md`
+> Covers 6 likely interview topics with mapped stories from your background, plus 5 questions to ask them.
+>
+> Both are viewable on your board — open `Kanban/index.html` and click the role card.
+
+This applies to ALL skills that write files — search (JDs, briefs, overviews), prep (overview, prep), apply (cover letter, resume), assess (JD, overview).
