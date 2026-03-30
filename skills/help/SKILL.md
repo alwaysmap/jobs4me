@@ -48,7 +48,7 @@ If the user has an existing profile (check for `profile.yaml`), tailor the respo
 
 Always include at the end:
 
-> **Need help or have feedback?** File an issue at [github.com/alwaysmap/jobs4me/issues](https://github.com/alwaysmap/jobs4me/issues) — bug reports, feature ideas, and questions are all welcome.
+> **Found a bug?** [Report it](https://github.com/alwaysmap/jobs4me/issues/new?template=bug.yml) · [Known issues](https://github.com/alwaysmap/jobs4me/issues?q=is%3Aissue+label%3Abug)
 >
 > **Docs:** [jobs4me.org](https://jobs4me.org)
 
