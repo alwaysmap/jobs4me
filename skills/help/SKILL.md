@@ -46,4 +46,10 @@ If the user has an existing profile (check for `profile.yaml`), tailor the respo
 - If they haven't run a search yet, nudge toward `/search`
 - If their `evidence_complete` is false, mention `/tweak` to add career evidence
 
+Always include at the end:
+
+> **Need help or have feedback?** File an issue at [github.com/alwaysmap/jobs4me/issues](https://github.com/alwaysmap/jobs4me/issues) — bug reports, feature ideas, and questions are all welcome.
+>
+> **Docs:** [jobs4me.org](https://jobs4me.org)
+
 Keep it short. The user asked for help, not a manual.
