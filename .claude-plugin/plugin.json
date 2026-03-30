@@ -1,6 +1,6 @@
 {
   "name": "jobs-for-me",
-  "version": "0.5.11",
+  "version": "0.5.12",
   "description": "An AI-powered job search agent that learns what roles you'd actually take, finds them, assesses fit, and prepares you for interviews",
   "author": {
     "name": "Dylan Thomas",
