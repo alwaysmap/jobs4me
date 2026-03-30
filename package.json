@@ -1,6 +1,6 @@
 {
   "name": "jobs-for-me",
-  "version": "0.5.2",
+  "version": "0.5.10",
   "private": true,
   "type": "module",
   "scripts": {

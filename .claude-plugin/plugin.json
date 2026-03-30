@@ -1,6 +1,6 @@
 {
   "name": "jobs-for-me",
-  "version": "0.5.2",
+  "version": "0.5.10",
   "description": "An AI-powered job search agent that learns what roles you'd actually take, finds them, assesses fit, and prepares you for interviews",
   "author": {
     "name": "Dylan Thomas",
@@ -9,5 +9,10 @@
   "repository": "https://github.com/alwaysmap/jobs4me",
   "homepage": "https://github.com/alwaysmap/jobs4me",
   "license": "SEE LICENSE IN LICENSE",
-  "keywords": ["job-search", "career", "recruiting", "interview-prep"]
+  "keywords": [
+    "job-search",
+    "career",
+    "recruiting",
+    "interview-prep"
+  ]
 }
