@@ -490,7 +490,10 @@ function buildCard(app) {
   card.className = 'card';
 
   const urlHtml = app.url ? `<a href="${app.url}" target="_blank">Job posting</a>` : '';
-  const linksHtml = [urlHtml].filter(Boolean).join(' &middot; ');
+  const cardDocLinks = [];
+  if (app.has_overview) cardDocLinks.push(`<button class="doc-link" onclick="event.stopPropagation(); openDoc('${esc(app.id)}','overview','${esc(app.company)}')">Company overview</button>`);
+  if (app.has_prep) cardDocLinks.push(`<button class="doc-link" onclick="event.stopPropagation(); openDoc('${esc(app.id)}','prep','${esc(app.company)}')">Interview prep</button>`);
+  const linksHtml = [urlHtml, ...cardDocLinks].filter(Boolean).join(' &middot; ');
   const archetypeHtml = app.archetype && ARCHETYPE_LABELS[app.archetype]
     ? `<span class="archetype-tag privacy-blur">${ARCHETYPE_LABELS[app.archetype]}</span>` : '';
 

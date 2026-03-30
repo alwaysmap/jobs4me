@@ -172,15 +172,41 @@ function roleDirPath(dir, app) {
  * @param {Application} app
  * @returns {DocPaths}
  */
+/**
+ * Scan a company directory for any role subdirectory matching this app.
+ * Falls back to computed path if no match found on disk.
+ * This handles cases where the directory was created with a slightly
+ * different slug or date than what roleDirName() would compute now.
+ */
+function findRoleDirOnDisk(dir, app) {
+  const cd = companyDirPath(dir, app.company || 'Unknown');
+  if (!fs.existsSync(cd)) return null;
+
+  const slug = slugify(app.role);
+  const entries = fs.readdirSync(cd, { withFileTypes: true });
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    // Match any directory ending with the role slug
+    if (entry.name.endsWith(`-${slug}`)) {
+      return path.join(cd, entry.name);
+    }
+  }
+  return null;
+}
+
 function resolveDocPaths(dir, app) {
   const company = app.company || '';
-  const rd = roleDirPath(dir, app);
   const cd = companyDirPath(dir, company);
 
+  // Try computed path first, then scan disk for a matching directory
+  const rd = roleDirPath(dir, app);
+  const rdExists = fs.existsSync(rd);
+  const actualRd = rdExists ? rd : (findRoleDirOnDisk(dir, app) || rd);
+
   const candidates = {
-    jd:       [path.join(rd, 'jd.md'),      path.join(dir, 'active', `${company} - JD.md`)],
-    overview: [path.join(cd, 'overview.md'), path.join(dir, `${company} - Company Overview.md`)],
-    prep:     [path.join(rd, 'prep.md'),     path.join(dir, `${company} - Interview Prep.md`)],
+    jd:       [path.join(actualRd, 'jd.md'),  path.join(dir, 'active', `${company} - JD.md`)],
+    overview: [path.join(cd, 'overview.md'),   path.join(dir, `${company} - Company Overview.md`)],
+    prep:     [path.join(actualRd, 'prep.md'), path.join(dir, `${company} - Interview Prep.md`)],
   };
 
   const result = {};
