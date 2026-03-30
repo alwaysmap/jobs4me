@@ -446,21 +446,27 @@ function buildConfigData(dir) {
   const profilePath = path.join(dir, 'profile.yaml');
   if (fs.existsSync(profilePath)) {
     const profile = yaml.load(fs.readFileSync(profilePath, 'utf8')) || {};
+    if (profile.name) config.profile_name = profile.name;
     if (profile.preferences) config.preferences = profile.preferences;
+    if (profile.evidence) config.evidence = profile.evidence;
   }
 
   const archetypesPath = path.join(dir, 'archetypes.yaml');
   if (fs.existsSync(archetypesPath)) {
     const arcDoc = yaml.load(fs.readFileSync(archetypesPath, 'utf8'));
-    config.archetypes = Array.isArray(arcDoc) ? arcDoc : (arcDoc?.archetypes || []);
+    // Support multiple key names: archetypes, role_types, or plain array
+    config.archetypes = Array.isArray(arcDoc)
+      ? arcDoc
+      : (arcDoc?.archetypes || arcDoc?.role_types || []);
   }
 
   const filters = readFilters(dir);
-  if (filters.include?.sources)          config.sources = filters.include.sources;
-  if (filters.include?.target_companies) config.target_companies = filters.include.target_companies;
-  if (filters.watch)                     config.watch = filters.watch;
-  if (filters.skip)                      config.skip = filters.skip;
-  if (filters.decline_patterns)          config.decline_patterns = filters.decline_patterns;
+  // Support both flat (sources:) and nested (include.sources:) layouts
+  config.sources          = filters.include?.sources || filters.sources || [];
+  config.target_companies = filters.include?.target_companies || filters.target_companies || [];
+  config.watch            = filters.watch || [];
+  config.skip             = filters.skip || filters.skip_companies || [];
+  config.decline_patterns = filters.decline_patterns || [];
 
   return config;
 }
