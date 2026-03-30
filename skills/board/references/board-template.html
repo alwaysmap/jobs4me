@@ -364,6 +364,7 @@ function openDetail(app) {
   if (app.has_jd) docsLinks.push(`<button class="doc-link" onclick="openDoc('${esc(appId)}','jd','${esc(app.company)}')">JD</button>`);
   if (app.has_overview) docsLinks.push(`<button class="doc-link" onclick="openDoc('${esc(appId)}','overview','${esc(app.company)}')">Company overview</button>`);
   if (app.has_prep) docsLinks.push(`<button class="doc-link" onclick="openDoc('${esc(appId)}','prep','${esc(app.company)}')">Interview prep</button>`);
+  if (app.has_cover_letter) docsLinks.push(`<button class="doc-link" onclick="openDoc('${esc(appId)}','cover_letter','${esc(app.company)}')">Cover letter</button>`);
   const links = [urlHtml, ...docsLinks].filter(Boolean).join(' &middot; ');
   const archetypeHtml = app.archetype && ARCHETYPE_LABELS[app.archetype]
     ? `<div class="dp-archetype">${ARCHETYPE_LABELS[app.archetype]}</div>` : '';
@@ -493,6 +494,7 @@ function buildCard(app) {
   const cardDocLinks = [];
   if (app.has_overview) cardDocLinks.push(`<button class="doc-link" onclick="event.stopPropagation(); openDoc('${esc(app.id)}','overview','${esc(app.company)}')">Company overview</button>`);
   if (app.has_prep) cardDocLinks.push(`<button class="doc-link" onclick="event.stopPropagation(); openDoc('${esc(app.id)}','prep','${esc(app.company)}')">Interview prep</button>`);
+  if (app.has_cover_letter) cardDocLinks.push(`<button class="doc-link" onclick="event.stopPropagation(); openDoc('${esc(app.id)}','cover_letter','${esc(app.company)}')">Cover letter</button>`);
   const linksHtml = [urlHtml, ...cardDocLinks].filter(Boolean).join(' &middot; ');
   const archetypeHtml = app.archetype && ARCHETYPE_LABELS[app.archetype]
     ? `<span class="archetype-tag privacy-blur">${ARCHETYPE_LABELS[app.archetype]}</span>` : '';
@@ -546,7 +548,7 @@ function openDoc(appId, type, company) {
   const key = type === 'overview' ? `${company}::overview` : `${appId}::${type}`;
   const md = documents[key];
   if (!md) return;
-  const labels = { jd: 'Job Description', overview: 'Company Overview', prep: 'Interview Prep' };
+  const labels = { jd: 'Job Description', overview: 'Company Overview', prep: 'Interview Prep', cover_letter: 'Cover Letter' };
   document.getElementById('doc-title').textContent = `${company || appId} — ${labels[type] || type}`;
   const body = document.getElementById('doc-body');
   body.innerHTML = marked.parse(md);

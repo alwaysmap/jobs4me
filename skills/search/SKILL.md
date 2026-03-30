@@ -149,7 +149,15 @@ After all research is complete, rebuild the board one final time so overviews ar
 node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js build-board
 ```
 
-**Write the search brief** to `briefs/` (see `references/brief-format.md`). Include the source status summary.
+**Write the search brief.** This is REQUIRED after every search — including the first one.
+
+1. Create the directory if needed: `mkdir -p briefs/`
+2. Write the brief to `briefs/{YYYY-MM-DD}.md` (see `references/brief-format.md` for the template)
+3. Include: summary, new suggestions, companies to watch, near misses, source status table, market observations
+
+The brief is the user's record of what happened in each search. It's viewable on the board via the Briefs menu.
+
+> "Search brief saved to `briefs/{date}.md`."
 
 ---
 

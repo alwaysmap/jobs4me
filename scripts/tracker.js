@@ -83,9 +83,11 @@ const YAML_DUMP_OPTIONS = {
  * @property {string} jd
  * @property {string} overview
  * @property {string} prep
+ * @property {string} cover_letter
  * @property {boolean} has_jd
  * @property {boolean} has_overview
  * @property {boolean} has_prep
+ * @property {boolean} has_cover_letter
  */
 
 // ────────────────────────────────────────────────────────────────
@@ -227,13 +229,19 @@ function resolveDocPaths(dir, app) {
     : findFileInCompanyDir(cd, 'prep.md', roleSlug)
     || (fs.existsSync(prepLegacy) ? prepLegacy : null);
 
+  const coverComputed = path.join(rd, 'cover-letter.md');
+  const coverFound = fs.existsSync(coverComputed) ? coverComputed
+    : findFileInCompanyDir(cd, 'cover-letter.md', roleSlug);
+
   return /** @type {DocPaths} */ ({
-    jd:           jdFound || jdComputed,
-    has_jd:       !!jdFound,
-    overview:     overviewExists ? overviewPreferred : (overviewLegacyExists ? overviewLegacy : overviewPreferred),
-    has_overview: overviewExists || overviewLegacyExists,
-    prep:         prepFound || prepComputed,
-    has_prep:     !!prepFound,
+    jd:               jdFound || jdComputed,
+    has_jd:           !!jdFound,
+    overview:         overviewExists ? overviewPreferred : (overviewLegacyExists ? overviewLegacy : overviewPreferred),
+    has_overview:     overviewExists || overviewLegacyExists,
+    prep:             prepFound || prepComputed,
+    has_prep:         !!prepFound,
+    cover_letter:     coverFound || coverComputed,
+    has_cover_letter: !!coverFound,
   });
 }
 
@@ -555,7 +563,7 @@ function stageEntry(doc, id, stage) {
 function enrichAppsWithDocFlags(dir, apps) {
   return apps.map(app => {
     const docs = resolveDocPaths(dir, app);
-    return { ...app, has_jd: docs.has_jd, has_overview: docs.has_overview, has_prep: docs.has_prep };
+    return { ...app, has_jd: docs.has_jd, has_overview: docs.has_overview, has_prep: docs.has_prep, has_cover_letter: docs.has_cover_letter };
   });
 }
 
@@ -598,8 +606,8 @@ function buildDocumentData(dir, apps) {
   for (const app of apps) {
     const docs = resolveDocPaths(dir, app);
 
-    // JD and prep are role-specific — key by app ID
-    for (const key of ['jd', 'prep']) {
+    // JD, prep, and cover letter are role-specific — key by app ID
+    for (const key of ['jd', 'prep', 'cover_letter']) {
       if (docs[`has_${key}`] && fs.existsSync(docs[key])) {
         data[`${app.id}::${key}`] = fs.readFileSync(docs[key], 'utf8');
       }
@@ -688,7 +696,7 @@ function buildBoard(dir, options = {}) {
 
   const trackerData = [
     ...enrichAppsWithDocFlags(dir, activeApps),
-    ...terminalApps.map(app => ({ ...app, has_jd: false, has_overview: false, has_prep: false })),
+    ...terminalApps.map(app => ({ ...app, has_jd: false, has_overview: false, has_prep: false, has_cover_letter: false })),
   ];
 
   const configData   = buildConfigData(dir);
