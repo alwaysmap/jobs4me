@@ -1,0 +1,42 @@
+name: Bug Report
+description: Something isn't working as expected.
+labels: ["bug"]
+body:
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: What did you do? Include the command you ran if applicable.
+      placeholder: |
+        1. Ran `/search`
+        2. Clicked "Company overview" on the Capital One card
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: observed
+    attributes:
+      label: What happened
+      description: What did you actually see?
+      placeholder: The flyout panel was empty / the board showed an error / ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+      description: What should have happened instead?
+      placeholder: The company overview should have appeared in the flyout panel.
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Plugin version
+      description: Check Settings in the board or your plugin.json.
+      placeholder: "0.6.2"
+    validations:
+      required: false
