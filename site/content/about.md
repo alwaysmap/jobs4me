@@ -18,3 +18,7 @@ The plugin teaches Claude how to be a job search agent through **skills** (domai
 ## Open source
 
 The source code is at [github.com/alwaysmap/jobs4me](https://github.com/alwaysmap/jobs4me). The plugin runs on your existing Claude Pro or Max subscription — no additional cost.
+
+## Getting help
+
+{{< help-links >}}

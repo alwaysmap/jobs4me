@@ -5,3 +5,5 @@ params:
   description: An AI-powered job search agent for Claude
   tagline: Your job search, on autopilot.
   repoUrl: https://github.com/alwaysmap/jobs4me
+  bugReportUrl: https://github.com/alwaysmap/jobs4me/issues/new?template=bug.yml
+  knownIssuesUrl: https://github.com/alwaysmap/jobs4me/issues?q=is%3Aissue+label%3Abug
