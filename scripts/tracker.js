@@ -173,50 +173,73 @@ function roleDirPath(dir, app) {
  * @returns {DocPaths}
  */
 /**
- * Scan a company directory for any role subdirectory matching this app.
- * Falls back to computed path if no match found on disk.
- * This handles cases where the directory was created with a slightly
- * different slug or date than what roleDirName() would compute now.
+ * Find a specific file (e.g., 'prep.md', 'jd.md') anywhere inside a company
+ * directory — checks company root and all subdirectories.
+ * Returns the first match, preferring subdirs that match the role slug.
  */
-function findRoleDirOnDisk(dir, app) {
-  const cd = companyDirPath(dir, app.company || 'Unknown');
+function findFileInCompanyDir(cd, filename, roleSlug) {
   if (!fs.existsSync(cd)) return null;
 
-  const slug = slugify(app.role);
-  const entries = fs.readdirSync(cd, { withFileTypes: true });
-  for (const entry of entries) {
-    if (!entry.isDirectory()) continue;
-    // Match any directory ending with the role slug
-    if (entry.name.endsWith(`-${slug}`)) {
-      return path.join(cd, entry.name);
+  // Check company root (e.g., companies/Oracle/prep.md)
+  const rootPath = path.join(cd, filename);
+  if (fs.existsSync(rootPath)) return rootPath;
+
+  // Scan subdirectories — prefer slug match, accept any
+  const entries = fs.readdirSync(cd, { withFileTypes: true })
+    .filter(e => e.isDirectory());
+
+  // First pass: match by slug
+  if (roleSlug) {
+    for (const entry of entries) {
+      if (entry.name.includes(roleSlug)) {
+        const p = path.join(cd, entry.name, filename);
+        if (fs.existsSync(p)) return p;
+      }
     }
   }
+
+  // Second pass: any subdirectory with the file
+  for (const entry of entries) {
+    const p = path.join(cd, entry.name, filename);
+    if (fs.existsSync(p)) return p;
+  }
+
   return null;
 }
 
 function resolveDocPaths(dir, app) {
   const company = app.company || '';
   const cd = companyDirPath(dir, company);
-
-  // Try computed path first, then scan disk for a matching directory
   const rd = roleDirPath(dir, app);
-  const rdExists = fs.existsSync(rd);
-  const actualRd = rdExists ? rd : (findRoleDirOnDisk(dir, app) || rd);
+  const roleSlug = slugify(app.role);
 
-  const candidates = {
-    jd:       [path.join(actualRd, 'jd.md'),  path.join(dir, 'active', `${company} - JD.md`)],
-    overview: [path.join(cd, 'overview.md'),   path.join(dir, `${company} - Company Overview.md`)],
-    prep:     [path.join(actualRd, 'prep.md'), path.join(dir, `${company} - Interview Prep.md`)],
-  };
+  // Overview is always at company level
+  const overviewPreferred = path.join(cd, 'overview.md');
+  const overviewLegacy = path.join(dir, `${company} - Company Overview.md`);
+  const overviewExists = fs.existsSync(overviewPreferred);
+  const overviewLegacyExists = !overviewExists && fs.existsSync(overviewLegacy);
 
-  const result = {};
-  for (const [key, [preferred, legacy]] of Object.entries(candidates)) {
-    const preferredExists = fs.existsSync(preferred);
-    const legacyExists = !preferredExists && fs.existsSync(legacy);
-    result[key] = preferredExists ? preferred : (legacyExists ? legacy : preferred);
-    result[`has_${key}`] = preferredExists || legacyExists;
-  }
-  return /** @type {DocPaths} */ (result);
+  // JD and prep: try computed role dir first, then scan company dir
+  const jdComputed = path.join(rd, 'jd.md');
+  const jdLegacy = path.join(dir, 'active', `${company} - JD.md`);
+  const jdFound = fs.existsSync(jdComputed) ? jdComputed
+    : findFileInCompanyDir(cd, 'jd.md', roleSlug)
+    || (fs.existsSync(jdLegacy) ? jdLegacy : null);
+
+  const prepComputed = path.join(rd, 'prep.md');
+  const prepLegacy = path.join(dir, `${company} - Interview Prep.md`);
+  const prepFound = fs.existsSync(prepComputed) ? prepComputed
+    : findFileInCompanyDir(cd, 'prep.md', roleSlug)
+    || (fs.existsSync(prepLegacy) ? prepLegacy : null);
+
+  return /** @type {DocPaths} */ ({
+    jd:           jdFound || jdComputed,
+    has_jd:       !!jdFound,
+    overview:     overviewExists ? overviewPreferred : (overviewLegacyExists ? overviewLegacy : overviewPreferred),
+    has_overview: overviewExists || overviewLegacyExists,
+    prep:         prepFound || prepComputed,
+    has_prep:     !!prepFound,
+  });
 }
 
 // ────────────────────────────────────────────────────────────────
