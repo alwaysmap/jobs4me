@@ -109,9 +109,11 @@ function parseArgs(argv) {
 // Path helpers
 // ────────────────────────────────────────────────────────────────
 
-const trackerPath = (dir) => path.join(dir, 'tracker.yaml');
-const filtersPath = (dir) => path.join(dir, 'filters.yaml');
-const backupsDir  = (dir) => path.join(dir, '.backups');
+const trackerPath    = (dir) => path.join(dir, 'tracker.yaml');
+const profilePath    = (dir) => path.join(dir, 'profile.yaml');
+const archetypesPath = (dir) => path.join(dir, 'archetypes.yaml');
+const filtersPath    = (dir) => path.join(dir, 'filters.yaml');
+const backupsDir     = (dir) => path.join(dir, '.backups');
 
 function slugify(text, maxLen = 50) {
   return (text || 'unknown')
@@ -254,17 +256,134 @@ function writeTracker(dir, doc) {
   validateDoc(doc);
 }
 
+function readProfile(dir) {
+  const p = profilePath(dir);
+  if (!fs.existsSync(p)) return {};
+  return yaml.load(fs.readFileSync(p, 'utf8')) || {};
+}
+
+function writeProfile(dir, doc) {
+  backup(dir, 'profile.yaml');
+  validateProfile(doc);
+  fs.writeFileSync(profilePath(dir), yaml.dump(doc, YAML_DUMP_OPTIONS), 'utf8');
+}
+
+function readArchetypes(dir) {
+  const p = archetypesPath(dir);
+  if (!fs.existsSync(p)) return { role_types: [] };
+  const doc = yaml.load(fs.readFileSync(p, 'utf8')) || {};
+  // Normalize: accept archetypes or role_types key
+  if (doc.archetypes && !doc.role_types) {
+    doc.role_types = doc.archetypes;
+    delete doc.archetypes;
+  }
+  if (!doc.role_types) doc.role_types = [];
+  return doc;
+}
+
+function writeArchetypes(dir, doc) {
+  backup(dir, 'archetypes.yaml');
+  validateArchetypes(doc);
+  fs.writeFileSync(archetypesPath(dir), yaml.dump(doc, YAML_DUMP_OPTIONS), 'utf8');
+}
+
+/** Read filters.yaml with key normalization to canonical names. */
 function readFilters(dir) {
   const p = filtersPath(dir);
   if (!fs.existsSync(p)) {
-    return { include: {}, skip: [], watch: [], priority_sources: [], decline_patterns: [] };
+    return { sources: [], target_companies: [], skip_companies: [], watch: [], decline_patterns: [] };
   }
-  return yaml.load(fs.readFileSync(p, 'utf8')) || {};
+  const raw = yaml.load(fs.readFileSync(p, 'utf8')) || {};
+  // Normalize legacy key names → canonical
+  return {
+    sources:          raw.include?.sources || raw.sources || [],
+    target_companies: raw.include?.target_companies || raw.target_companies || [],
+    skip_companies:   raw.skip_companies || raw.skip || [],
+    watch:            raw.watch || [],
+    decline_patterns: raw.decline_patterns || [],
+  };
 }
 
 function writeFilters(dir, doc) {
   backup(dir, 'filters.yaml');
+  validateFilters(doc);
   fs.writeFileSync(filtersPath(dir), yaml.dump(doc, YAML_DUMP_OPTIONS), 'utf8');
+}
+
+// ────────────────────────────────────────────────────────────────
+// Config validation
+// ────────────────────────────────────────────────────────────────
+
+const VALID_SENIORITY = ['ic', 'manager', 'director', 'vp', 'c-level'];
+const VALID_SOURCE_TYPES = ['job_board', 'org_portfolio', 'career_page', 'curated_list', 'aggregator'];
+
+function validateProfile(doc) {
+  const errors = [];
+  if (doc.preferences) {
+    const p = doc.preferences;
+    if (p.comp_floor_usd != null && typeof p.comp_floor_usd !== 'number') {
+      errors.push('preferences.comp_floor_usd must be a number');
+    }
+    if (p.max_travel_pct != null && (typeof p.max_travel_pct !== 'number' || p.max_travel_pct < 0 || p.max_travel_pct > 100)) {
+      errors.push('preferences.max_travel_pct must be 0-100');
+    }
+    if (p.seniority_floor && !VALID_SENIORITY.includes(p.seniority_floor)) {
+      errors.push(`preferences.seniority_floor must be one of: ${VALID_SENIORITY.join(', ')}`);
+    }
+  }
+  if (doc.evidence?.case_studies) {
+    doc.evidence.case_studies.forEach((cs, i) => {
+      if (!cs.name) errors.push(`evidence.case_studies[${i}]: missing name`);
+      if (!cs.situation) errors.push(`evidence.case_studies[${i}]: missing situation`);
+      if (!cs.action) errors.push(`evidence.case_studies[${i}]: missing action`);
+      if (!cs.outcome) errors.push(`evidence.case_studies[${i}]: missing outcome`);
+      if (!Array.isArray(cs.skills)) errors.push(`evidence.case_studies[${i}]: skills must be an array`);
+    });
+  }
+  if (errors.length > 0) throw new Error('Profile validation failed:\n  ' + errors.join('\n  '));
+}
+
+function validateArchetypes(doc) {
+  const errors = [];
+  if (!Array.isArray(doc.role_types)) {
+    errors.push('role_types must be an array');
+  } else {
+    const keys = new Set();
+    doc.role_types.forEach((rt, i) => {
+      if (!rt.key) errors.push(`role_types[${i}]: missing key`);
+      if (!rt.name) errors.push(`role_types[${i}]: missing name`);
+      if (!Array.isArray(rt.titles) || rt.titles.length === 0) errors.push(`role_types[${i}]: titles must be a non-empty array`);
+      if (!Array.isArray(rt.keywords) || rt.keywords.length === 0) errors.push(`role_types[${i}]: keywords must be a non-empty array`);
+      if (!rt.experience_mapping) errors.push(`role_types[${i}]: missing experience_mapping`);
+      if (!rt.company_fit) errors.push(`role_types[${i}]: missing company_fit`);
+      if (rt.key && keys.has(rt.key)) errors.push(`role_types[${i}]: duplicate key "${rt.key}"`);
+      if (rt.key) keys.add(rt.key);
+    });
+  }
+  if (errors.length > 0) throw new Error('Archetypes validation failed:\n  ' + errors.join('\n  '));
+}
+
+function validateFilters(doc) {
+  const errors = [];
+  if (doc.sources) {
+    doc.sources.forEach((s, i) => {
+      if (!s.name) errors.push(`sources[${i}]: missing name`);
+      if (!s.url) errors.push(`sources[${i}]: missing url`);
+      if (s.type && !VALID_SOURCE_TYPES.includes(s.type)) {
+        errors.push(`sources[${i}]: type must be one of: ${VALID_SOURCE_TYPES.join(', ')}`);
+      }
+    });
+  }
+  for (const key of ['target_companies', 'skip_companies', 'watch']) {
+    if (doc[key] && !Array.isArray(doc[key])) errors.push(`${key} must be an array`);
+  }
+  if (doc.decline_patterns) {
+    doc.decline_patterns.forEach((p, i) => {
+      const pattern = typeof p === 'string' ? p : p?.pattern;
+      if (!pattern) errors.push(`decline_patterns[${i}]: missing pattern`);
+    });
+  }
+  if (errors.length > 0) throw new Error('Filters validation failed:\n  ' + errors.join('\n  '));
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -781,6 +900,185 @@ const commands = {
     return { saved: jdPath, company: app.company, role: app.role, bytes: content.length };
   },
 
+  // ── Config: profile, archetypes, filters ──
+
+  'get-profile'(dir) {
+    return readProfile(dir);
+  },
+
+  'set-profile'(dir, args) {
+    const updates = JSON.parse(args.json);
+    const doc = readProfile(dir);
+
+    // Shallow merge at top level; for objects (evidence, preferences), merge one level deep
+    for (const [key, value] of Object.entries(updates)) {
+      if (typeof value === 'object' && value !== null && !Array.isArray(value) && typeof doc[key] === 'object') {
+        doc[key] = { ...doc[key], ...value };
+      } else {
+        doc[key] = value;
+      }
+    }
+
+    writeProfile(dir, doc);
+    return doc;
+  },
+
+  'get-archetypes'(dir) {
+    return readArchetypes(dir);
+  },
+
+  'set-archetypes'(dir, args) {
+    const input = JSON.parse(args.json);
+    const doc = { role_types: input.role_types || input };
+    writeArchetypes(dir, doc);
+    return doc;
+  },
+
+  'get-filters'(dir) {
+    return readFilters(dir);
+  },
+
+  'set-filters'(dir, args) {
+    const updates = JSON.parse(args.json);
+    const doc = readFilters(dir);
+
+    // Replace each provided key wholesale
+    for (const key of ['sources', 'target_companies', 'skip_companies', 'watch', 'decline_patterns']) {
+      if (updates[key] !== undefined) doc[key] = updates[key];
+    }
+
+    writeFilters(dir, doc);
+    return doc;
+  },
+
+  'update-filter-list'(dir, args) {
+    const list = args.list;
+    const allowed = ['target_companies', 'skip_companies', 'watch'];
+    if (!allowed.includes(list)) {
+      throw new Error(`--list must be one of: ${allowed.join(', ')}`);
+    }
+    if (!args.add && !args.remove) {
+      throw new Error('Provide --add and/or --remove (JSON arrays)');
+    }
+
+    const doc = readFilters(dir);
+    let items = doc[list] || [];
+
+    if (args.add) {
+      const toAdd = JSON.parse(args.add);
+      const existing = new Set(items.map(s => s.toLowerCase()));
+      for (const item of toAdd) {
+        if (!existing.has(item.toLowerCase())) {
+          items.push(item);
+          existing.add(item.toLowerCase());
+        }
+      }
+    }
+
+    if (args.remove) {
+      const toRemove = new Set(JSON.parse(args.remove).map(s => s.toLowerCase()));
+      items = items.filter(s => !toRemove.has(s.toLowerCase()));
+    }
+
+    doc[list] = items;
+    writeFilters(dir, doc);
+    return { list, items: doc[list] };
+  },
+
+  schema(_dir, args) {
+    const file = args.file || 'all';
+    const schemas = {
+      profile: {
+        file: 'profile.yaml',
+        shape: {
+          name: 'string (REQUIRED)',
+          email: 'string',
+          evidence: {
+            resume_url: 'URL string',
+            portfolio_urls: ['URL string'],
+            additional_context: 'block text',
+            case_studies: [{
+              name: 'string (REQUIRED)',
+              company: 'string',
+              date: 'YYYY-MM',
+              url: 'URL string',
+              situation: 'string (REQUIRED)',
+              action: 'string (REQUIRED)',
+              outcome: 'string (REQUIRED)',
+              skills: ['string (REQUIRED)'],
+            }],
+            evidence_complete: 'boolean',
+          },
+          preferences: {
+            comp_floor_usd: 'integer (REQUIRED)',
+            comp_floor_gbp: 'integer',
+            comp_exceptions: 'string',
+            max_travel_pct: 'integer 0-100 (REQUIRED)',
+            locations: ['remote_us | remote_uk | hybrid_<city> | onsite_<city>'],
+            seniority_floor: 'ic | manager | director | vp | c-level (REQUIRED)',
+            hard_nos: {
+              companies: ['string'],
+              industries: ['string'],
+            },
+          },
+        },
+      },
+      archetypes: {
+        file: 'archetypes.yaml',
+        shape: {
+          role_types: [{
+            key: 'kebab-case-id (REQUIRED, unique)',
+            name: 'string (REQUIRED)',
+            titles: ['string — 4-6 variations (REQUIRED)'],
+            keywords: ['string — search terms (REQUIRED)'],
+            experience_mapping: 'block text (REQUIRED)',
+            company_fit: 'string (REQUIRED)',
+          }],
+        },
+      },
+      filters: {
+        file: 'filters.yaml',
+        shape: {
+          sources: [{
+            name: 'string (REQUIRED)',
+            url: 'URL (REQUIRED)',
+            type: 'job_board | org_portfolio | career_page | curated_list | aggregator (REQUIRED)',
+            priority: 'integer (optional, lower = first)',
+          }],
+          target_companies: ['string'],
+          skip_companies: ['string'],
+          watch: ['string'],
+          decline_patterns: [{
+            pattern: 'string (REQUIRED)',
+            learned_from: 'string',
+          }],
+        },
+      },
+      tracker: {
+        file: 'tracker.yaml (NEVER write directly — use tracker.js commands)',
+        shape: {
+          applications: [{
+            id: 'string (auto-generated)',
+            company: 'string (REQUIRED)',
+            role: 'string (REQUIRED)',
+            stage: VALID_STAGES.join(' | '),
+            url: 'URL string',
+            archetype: 'role_types[].key from archetypes.yaml',
+            last_updated: 'YYYY-MM-DD (auto-set)',
+            agent_summary: 'markdown block scalar',
+            notes: 'string',
+            decision: { proceed: 'yes | no', reason: 'string' },
+            dates: { identified: 'YYYY-MM-DD', '[stage]': 'YYYY-MM-DD' },
+          }],
+        },
+      },
+    };
+
+    if (file === 'all') return schemas;
+    if (!schemas[file]) throw new Error(`Unknown file: "${file}". Valid: ${Object.keys(schemas).join(', ')}`);
+    return schemas[file];
+  },
+
   // ── File management ──
 
   migrate(dir) {
@@ -872,10 +1170,11 @@ const commands = {
       commands: {
         'Core CRUD':    ['list', 'get', 'add', 'update', 'decline', 'stage'],
         'Batch':        ['batch', 'batch-decline', 'filter-candidates'],
+        'Config':       ['get-profile', 'set-profile', 'get-archetypes', 'set-archetypes', 'get-filters', 'set-filters', 'update-filter-list'],
         'Files':        ['save-jd', 'migrate', 'paths', 'needs-research'],
         'Board':        ['board-json', 'build-board', 'list-briefs'],
         'Query':        ['count', 'find'],
-        'Housekeeping': ['init', 'validate', 'add-decline-pattern', 'help'],
+        'Housekeeping': ['init', 'validate', 'add-decline-pattern', 'schema', 'help'],
       },
       stages: VALID_STAGES,
       transitions: STAGE_TRANSITIONS,
@@ -883,10 +1182,11 @@ const commands = {
   },
 };
 
-// Commands that mutate tracker.yaml and support auto board rebuild
+// Commands that mutate data files and trigger auto board rebuild
 const MUTATING_COMMANDS = new Set([
   'add', 'update', 'decline', 'stage',
   'batch', 'batch-decline', 'add-decline-pattern',
+  'set-profile', 'set-archetypes', 'set-filters', 'update-filter-list',
 ]);
 
 // Required args per command
@@ -903,6 +1203,10 @@ const REQUIRED_ARGS = {
   'filter-candidates':   ['json'],
   'save-jd':             ['id'],
   paths:                 ['id'],
+  'set-profile':         ['json'],
+  'set-archetypes':      ['json'],
+  'set-filters':         ['json'],
+  'update-filter-list':  ['list'],
 };
 
 // ────────────────────────────────────────────────────────────────

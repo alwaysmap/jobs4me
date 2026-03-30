@@ -86,18 +86,27 @@ Every mutating command:
 
 ## Files Claude MAY Write Directly
 
-These files are written infrequently and have simple schemas:
+Only markdown content files — never YAML config:
 
-- `profile.yaml` — written during /setup, rarely changed after
-- `archetypes.yaml` — written during /setup, occasionally edited
-- `briefs/*.md` — markdown files, no schema concerns
-- `companies/*/overview.md` and `companies/*/*/jd.md`, `companies/*/*/prep.md` — research docs
-- `Kanban/index.html` — generated HTML, not user-editable data
+- `briefs/*.md` — search brief markdown files
+- `companies/*/overview.md` — company research docs
+- `companies/*/*/jd.md`, `companies/*/*/prep.md` — role-specific docs
+- `companies/*/*/cover-letter.md`, `companies/*/*/resume.md` — application materials
 
 ## Files Claude Must NEVER Write Directly
 
-- `tracker.yaml` — always use tracker.js
-- `filters.yaml` — use tracker.js for decline_patterns; other filter changes are rare enough to be acceptable via Edit tool with care
+**ALL YAML files must be written through tracker.js commands.** This ensures schema validation, backups, and board rebuilds.
+
+| File | Read command | Write command |
+|------|-------------|---------------|
+| `tracker.yaml` | `list`, `get`, `find`, `count` | `add`, `update`, `decline`, `stage`, `batch` |
+| `profile.yaml` | `get-profile` | `set-profile --json '{...}'` |
+| `archetypes.yaml` | `get-archetypes` | `set-archetypes --json '{...}'` |
+| `filters.yaml` | `get-filters` | `set-filters --json '{...}'`, `update-filter-list --list <name> --add/--remove '[...]'` |
+
+**To see the expected shape of any file:** `node tracker.js schema --file profile` (or `archetypes`, `filters`, `tracker`, `all`)
+
+**If a write fails validation**, the error message shows exactly which field is wrong and what's expected. Run `schema` to see the full shape.
 
 ## Surfacing Created Files
 
