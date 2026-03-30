@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{ if .IsHome }}{{ .Site.Title }}{{ else }}{{ .Title }} | {{ .Site.Title }}{{ end }}</title>
   {{- $desc := .Params.summary | default .Site.Params.description -}}
-  {{- $title := cond .IsHome .Site.Title (printf "%s | %s" .Title .Site.Title) -}}
-  {{- $image := .Site.BaseURL | strings.TrimSuffix "/" | printf "%s/images/board-overview.png" -}}
+  {{- $title := cond .IsHome "Jobs For Me — AI Job Search Agent for Claude" (printf "%s | %s" .Title .Site.Title) -}}
+  {{- $image := .Site.BaseURL | strings.TrimSuffix "/" | printf "%s/images/og.png" -}}
   <meta name="description" content="{{ $desc }}">
 
   <!-- Open Graph -->

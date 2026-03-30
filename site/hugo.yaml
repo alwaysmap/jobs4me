@@ -2,7 +2,7 @@ baseURL: https://jobs4me.org/
 languageCode: en-us
 title: Jobs For Me
 params:
-  description: An AI-powered job search agent for Claude
+  description: A free Claude plugin that searches for jobs, learns what roles you'd actually take, assesses fit, and prepares you for interviews.
   tagline: Your job search, on autopilot.
   repoUrl: https://github.com/alwaysmap/jobs4me
   bugReportUrl: https://github.com/alwaysmap/jobs4me/issues/new?template=bug.yml
