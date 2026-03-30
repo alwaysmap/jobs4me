@@ -13,19 +13,12 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Auto-install dependencies if missing (first run in a fresh Cowork VM)
-if (!fs.existsSync(path.join(__dirname, 'node_modules', 'js-yaml'))) {
-  console.error('Installing dependencies (first run)...');
-  execSync('npm install --production', { cwd: __dirname, stdio: 'inherit' });
-}
-
-// eslint-disable-next-line import/no-unresolved — resolved after auto-install above
-const yaml = (await import('js-yaml')).default;
+// js-yaml is bundled in the zip — no npm install needed
+import yaml from 'js-yaml';
 
 // ────────────────────────────────────────────────────────────────
 // Constants

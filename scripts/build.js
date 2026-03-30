@@ -64,13 +64,14 @@ const includes = [
   'scripts/tracker.js',
   'scripts/package.json',
   'scripts/package-lock.json',
+  'scripts/node_modules/js-yaml/',
   'skills/',
   'README.md',
   'LICENSE',
 ];
 
 const args = includes.map(f => JSON.stringify(f)).join(' ');
-const cmd = `cd ${JSON.stringify(root)} && zip -r ${JSON.stringify(outFile)} ${args} -x "*/node_modules/*" "*/.DS_Store"`;
+const cmd = `cd ${JSON.stringify(root)} && zip -r ${JSON.stringify(outFile)} ${args} -x "*/.DS_Store"`;
 
 try {
   execSync(cmd, { stdio: 'inherit' });
