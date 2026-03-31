@@ -68,7 +68,15 @@ The board auto-rebuilds on every tracker mutation. There is no need to check fre
 
 ## When to Offer the Board
 
-Always tell the user to open or refresh `Kanban/index.html` after any operation that changes their pipeline — search sweeps, stage changes, declines, review sessions. The board is always current because it auto-rebuilds on every mutation. The user should never need to run `/board` manually unless they want to force a rebuild after editing YAML files by hand.
+Always tell the user to open or refresh the board after any operation that changes their pipeline — search sweeps, stage changes, declines, review sessions. The board is always current because it auto-rebuilds on every mutation. The user should never need to run `/board` manually unless they want to force a rebuild after editing YAML files by hand.
+
+**IMPORTANT: How to reference the board in messages to the user.**
+
+Always use this exact phrasing with backtick code formatting. NEVER turn it into a markdown link — the file path is not a URL.
+
+Correct: `Your board is updated — refresh Kanban/index.html to see the changes.`
+
+WRONG: `[your Kanban board](some/path/Kanban/index.html)` — NEVER do this. The path is not a clickable URL. Just mention the filename in plain text or backticks.
 
 ## Data Format
 

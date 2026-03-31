@@ -126,3 +126,5 @@ Example:
 > Both are viewable on your board — open `Kanban/index.html` and click the role card.
 
 This applies to ALL skills that write files — search (JDs, briefs, overviews), prep (overview, prep), apply (cover letter, resume), assess (JD, overview).
+
+**NEVER turn file paths into markdown links.** File paths like `Kanban/index.html` or `companies/Oracle/overview.md` are not URLs. Always reference them in backticks or plain text, never as `[text](path)`. The workspace is a local folder, not a web server.
