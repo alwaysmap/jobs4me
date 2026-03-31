@@ -280,12 +280,17 @@ function readArchetypes(dir) {
   const p = archetypesPath(dir);
   if (!fs.existsSync(p)) return { role_types: [] };
   const doc = yaml.load(fs.readFileSync(p, 'utf8')) || {};
-  // Normalize: accept archetypes or role_types key
+  // Normalize top-level key: accept archetypes or role_types
   if (doc.archetypes && !doc.role_types) {
     doc.role_types = doc.archetypes;
     delete doc.archetypes;
   }
   if (!doc.role_types) doc.role_types = [];
+  // Normalize field aliases within each role type
+  for (const rt of doc.role_types) {
+    if (rt.search_keywords && !rt.keywords) { rt.keywords = rt.search_keywords; delete rt.search_keywords; }
+    if (rt.company_size && !rt.company_fit) { rt.company_fit = rt.company_size; delete rt.company_size; }
+  }
   return doc;
 }
 
@@ -578,14 +583,8 @@ function buildConfigData(dir) {
     if (profile.evidence) config.evidence = profile.evidence;
   }
 
-  const archetypesPath = path.join(dir, 'archetypes.yaml');
-  if (fs.existsSync(archetypesPath)) {
-    const arcDoc = yaml.load(fs.readFileSync(archetypesPath, 'utf8'));
-    // Support multiple key names: archetypes, role_types, or plain array
-    config.archetypes = Array.isArray(arcDoc)
-      ? arcDoc
-      : (arcDoc?.archetypes || arcDoc?.role_types || []);
-  }
+  const arcData = readArchetypes(dir);
+  if (arcData.role_types.length > 0) config.archetypes = arcData.role_types;
 
   const filters = readFilters(dir);
   // Support both flat (sources:) and nested (include.sources:) layouts
