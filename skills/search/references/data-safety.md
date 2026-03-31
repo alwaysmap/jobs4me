@@ -127,4 +127,4 @@ Example:
 
 This applies to ALL skills that write files — search (JDs, briefs, overviews), prep (overview, prep), apply (cover letter, resume), assess (JD, overview).
 
-**NEVER turn file paths into markdown links.** File paths like `Kanban/index.html` or `companies/Oracle/overview.md` are not URLs. Always reference them in backticks or plain text, never as `[text](path)`. The workspace is a local folder, not a web server.
+**When linking to files, use the actual workspace file path.** Always use the real resolved path (e.g., from `tracker.js paths` output or `JFM_DIR`). NEVER guess or construct URLs — Google Drive mount paths, Cowork session paths, etc. are not web URLs. If you don't know the exact path, use the filename in backticks without a link rather than guessing.

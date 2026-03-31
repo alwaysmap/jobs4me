@@ -70,13 +70,15 @@ The board auto-rebuilds on every tracker mutation. There is no need to check fre
 
 Always tell the user to open or refresh the board after any operation that changes their pipeline — search sweeps, stage changes, declines, review sessions. The board is always current because it auto-rebuilds on every mutation. The user should never need to run `/board` manually unless they want to force a rebuild after editing YAML files by hand.
 
-**IMPORTANT: How to reference the board in messages to the user.**
+**IMPORTANT: How to link to the board in messages to the user.**
 
-Always use this exact phrasing with backtick code formatting. NEVER turn it into a markdown link — the file path is not a URL.
+Use a markdown link with the **actual resolved file path** from the workspace. Get the path from the `build-board` command output (the `built` field) or construct it as `{workspace}/Kanban/index.html`.
 
-Correct: `Your board is updated — refresh Kanban/index.html to see the changes.`
+Correct: `Your board is updated — open [Kanban/index.html](/actual/workspace/path/Kanban/index.html) to see the changes.`
 
-WRONG: `[your Kanban board](some/path/Kanban/index.html)` — NEVER do this. The path is not a clickable URL. Just mention the filename in plain text or backticks.
+WRONG: `[your Kanban board](https://drive.google.com/drive/folders/Job Search/Kanban/index.html)` — NEVER guess or construct URLs. Use the actual file path from the workspace, not a URL you invented. Google Drive mount paths are NOT web URLs.
+
+The same rule applies to all file links (overviews, prep docs, cover letters, briefs): use the real file path, never a guessed URL.
 
 ## Data Format
 
