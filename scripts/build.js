@@ -43,9 +43,18 @@ function updateJsonVersion(filePath, version) {
 }
 
 const tagVersion = getGitTagVersion();
+function updateMarketplaceVersion(filePath, version) {
+  const json = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  if (json.plugins?.[0]) {
+    json.plugins[0].version = version;
+    fs.writeFileSync(filePath, JSON.stringify(json, null, 2) + '\n', 'utf8');
+  }
+}
+
 if (tagVersion) {
   updateJsonVersion(path.join(root, '.claude-plugin', 'plugin.json'), tagVersion);
   updateJsonVersion(path.join(root, 'package.json'), tagVersion);
+  updateMarketplaceVersion(path.join(root, '.claude-plugin', 'marketplace.json'), tagVersion);
 } else {
   // Read current version for display
   const plugin = JSON.parse(fs.readFileSync(path.join(root, '.claude-plugin', 'plugin.json'), 'utf8'));
@@ -61,6 +70,7 @@ if (fs.existsSync(outFile)) {
 
 const includes = [
   '.claude-plugin/plugin.json',
+  '.claude-plugin/marketplace.json',
   'scripts/tracker.js',
   'scripts/package.json',
   'scripts/package-lock.json',

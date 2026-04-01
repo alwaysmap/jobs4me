@@ -60,12 +60,21 @@ function updateVersion(filePath) {
 
 updateVersion(path.join(root, '.claude-plugin', 'plugin.json'));
 updateVersion(path.join(root, 'package.json'));
+
+// Update marketplace.json plugin version
+const marketplacePath = path.join(root, '.claude-plugin', 'marketplace.json');
+const marketplace = JSON.parse(fs.readFileSync(marketplacePath, 'utf8'));
+if (marketplace.plugins?.[0]) {
+  marketplace.plugins[0].version = version;
+  fs.writeFileSync(marketplacePath, JSON.stringify(marketplace, null, 2) + '\n', 'utf8');
+}
+
 console.log(`Updated version to ${version}`);
 
 // Commit, tag, push
 const run = (cmd) => execSync(cmd, { cwd: root, stdio: 'inherit' });
 
-run('git add .claude-plugin/plugin.json package.json');
+run('git add .claude-plugin/plugin.json .claude-plugin/marketplace.json package.json');
 run(`git commit -m "Release ${tag}"`);
 run(`git tag ${tag}`);
 run(`git push origin main ${tag}`);
