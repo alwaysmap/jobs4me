@@ -14,6 +14,8 @@ user_summary: >
 
 # Tweak Configuration
 
+**Read `search/references/routing.md` before processing any user message** — it defines where each type of input should be routed and the rule against saving job search data to Claude memory.
+
 Help the user make targeted changes to their setup without re-running the full onboarding. This is the "come back and adjust anything" command.
 
 ## Start
@@ -37,16 +39,20 @@ Map the user's request to the right file and section:
 
 | Request pattern | File | Action |
 |---|---|---|
-| "add [company] to my dream list" | filters.yaml | Add to include.target_companies |
+| "add [company] to my dream list" | filters.yaml | Add to target_companies |
 | "watch [company]" / "keep an eye on [company]" | filters.yaml | Add to watch list |
-| "skip [company]" / "never show me [company]" | filters.yaml | Add to skip list |
-| "add [source/URL] to my sources" | filters.yaml | Add to include.sources with appropriate type |
+| "skip [company]" / "never show me [company]" | filters.yaml | Add to skip_companies |
+| "add [source/URL] to my sources" | filters.yaml | Add to sources with appropriate type |
+| "interested in [industry/sector]" / "companies like this" | filters.yaml | Add to industries list |
 | "stop searching for [role type]" | archetypes.yaml | Remove or disable the role type |
 | "add a new role type for [description]" | archetypes.yaml | Draft a new role type, confirm with user |
 | "change my comp floor to [amount]" | profile.yaml | Update preferences.comp_floor_usd |
 | "I'm open to [location] now" | profile.yaml | Add to preferences.locations |
 | "add [URL] to my evidence" | profile.yaml | Fetch URL, extract key points, add to evidence |
 | "add career evidence" / "add projects" | profile.yaml | Enter career evidence mode (see below) |
+| "my experience at [company] includes..." | profile.yaml | Extract as career evidence (see below) |
+| "[URL to blog/portfolio/talk]" | profile.yaml | Fetch, extract key points, add to evidence |
+| "[URL to company careers page]" | filters.yaml | Add as career_page source |
 
 ## Source types
 
@@ -61,6 +67,54 @@ When adding sources, help the user classify them:
 If the user shares a portfolio or directory URL, fetch it to confirm it's a useful source and describe what you found:
 
 > I checked that page — it lists 47 organizations, mostly in [domain]. I'll include it in future searches and check each one's career page for matching roles. Looks like a good source for your [role type] targets.
+
+## Industry interests
+
+When the user expresses interest in an industry, sector, or domain — either directly ("I'm interested in water utilities") or indirectly ("companies like Cognite" when Cognite works in industrial data) — add the relevant industries to `filters.yaml`:
+
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js update-filter-list --list industries --add '["water utilities", "industrial data"]'
+```
+
+After adding, explain how this affects searches:
+
+> Got it — added "water utilities" and "industrial data" to your industry interests. I'll weight companies in these sectors more favorably in future searches.
+
+**After adding an industry, always do these follow-ups:**
+
+1. **Suggest sources** — search for job boards, associations, or directories specific to that sector. Present 2-3 concrete suggestions:
+   > "For water utilities, you might want to add: **AWWA Career Center** (awwa.org/careers — job_board), **WaterWorld** (waterworld.com/careers — aggregator), or individual utility career pages. Want me to add any of these?"
+
+2. **Check the watch list** — if a specific company triggered the interest, add it to the watch list (and offer to add its careers page as a source)
+
+3. **Check role types** — do any existing role types in `archetypes.yaml` need keyword updates to capture roles in this sector? If the user targets "Technical Program Manager" roles, adding "utilities" or "infrastructure" to that role type's keywords helps surface relevant results. Confirm before changing.
+
+4. **Check career evidence** — does the user have experience in this industry? If they mentioned it ("my work at Woolpert with water utilities"), capture it as evidence. If they didn't mention specific experience, ask: "Do you have experience in this area, or is this a new interest?"
+
+## Extracting evidence from casual mentions
+
+Users often mention career experience in passing — "my project history at Woolpert includes working with public water utilities" — without realizing it's valuable evidence for the search agent. **Don't let these slide.** This is career evidence that strengthens fit assessments and cover letters.
+
+When the user mentions experience casually:
+
+1. **Acknowledge it and ask one focused follow-up** to get enough for a case study:
+   > "Working with public water utilities at Woolpert is great context for roles in this space. Can you tell me a bit more — what did you do there and what was the outcome?"
+
+2. **Structure the response** as a case study (situation, action, outcome) with skill tags
+
+3. **Save via tracker.js**:
+   ```bash
+   node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js set-profile --json '{"evidence":{"case_studies":[...existing plus new...]}}'
+   ```
+
+4. **Check downstream effects** — does this experience suggest:
+   - New industry interests for `filters.yaml`?
+   - New keywords for `archetypes.yaml`?
+   - A stronger `experience_mapping` for an existing role type?
+
+Don't just save the evidence in isolation — connect it to the search configuration.
+
+Similarly, when the user shares a URL (blog post, portfolio, talk), **always fetch it** and extract key points for evidence. Don't just note the URL — read it, summarize the relevance, and save structured evidence.
 
 ## Career evidence mode
 

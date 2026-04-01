@@ -102,7 +102,7 @@ Only markdown content files — never YAML config:
 | `tracker.yaml` | `list`, `get`, `find`, `count` | `add`, `update`, `decline`, `stage`, `batch` |
 | `profile.yaml` | `get-profile` | `set-profile --json '{...}'` |
 | `archetypes.yaml` | `get-archetypes` | `set-archetypes --json '{...}'` |
-| `filters.yaml` | `get-filters` | `set-filters --json '{...}'`, `update-filter-list --list <name> --add/--remove '[...]'` |
+| `filters.yaml` | `get-filters` | `set-filters --json '{...}'`, `update-filter-list --list <name> --add/--remove '[...]'` (lists: target_companies, skip_companies, watch, industries) |
 
 **To see the expected shape of any file:** `node tracker.js schema --file profile` (or `archetypes`, `filters`, `tracker`, `all`)
 

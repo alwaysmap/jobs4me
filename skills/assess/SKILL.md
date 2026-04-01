@@ -14,6 +14,8 @@ user_summary: >
 
 **Shell setup:** The tracker script auto-detects the workspace directory. Set `JFM_DIR` only if the path contains special characters.
 
+**Read `search/references/routing.md` before processing any user message** — it defines how to decompose compound messages and where to route each type of input.
+
 Assess a specific job posting against the user's profile.
 
 ## Steps
@@ -65,6 +67,19 @@ Assess a specific job posting against the user's profile.
     Rebuild the board after writing the overview so it's embedded in the board.
 
 If no URL is provided, ask the user for one. They can also paste the JD text directly instead of a URL.
+
+## Compound requests during assessment
+
+Users may share additional context alongside a job posting: "check this role — my work at Woolpert is relevant here because of water utilities" or "assess this, and add the company to my watch list."
+
+**After the assessment, scan the rest of the message for:**
+
+- **Company interest** → add to watch list or target companies
+- **Industry interest** → add to filters.yaml industries list
+- **Career evidence** → ask a follow-up, save to profile.yaml
+- **Additional URLs** (careers page, blog post, portfolio) → route appropriately
+
+Handle the assessment first, then address secondary intents. See `search/references/routing.md` for the full routing decision tree.
 
 ## Decline Pattern Learning
 

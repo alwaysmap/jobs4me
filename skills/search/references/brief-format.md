@@ -52,6 +52,17 @@ After each search sweep, write a brief to `briefs/{YYYY-MM-DD}.md` (or `{YYYY-MM
 
 {List of include-list companies whose career pages were checked and had no matching roles}
 
+## Industry Match Report
+
+{If `filters.yaml` has industries set, report on them:}
+
+| Industry Interest | Roles Found | Notes |
+|---|---|---|
+| water utilities | 2 | Both at regional utilities, director-level |
+| industrial data | 1 | Cognite — stretch on seniority |
+
+{If no roles matched any industry interest, say so: "No roles found in your preferred industries this sweep. Consider adding more sources in these sectors — I can suggest some if you run /tweak."}
+
 ## Market Observations
 
 {Structural patterns worth noting: market tightness, hybrid creep, domain specialization trends, salary trends, companies hiring aggressively vs. freezing}

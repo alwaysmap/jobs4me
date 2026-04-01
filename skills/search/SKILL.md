@@ -24,6 +24,10 @@ The tracker script auto-detects the workspace directory and auto-installs npm de
 export JFM_DIR='<workspace path>'
 ```
 
+## Routing Rules
+
+**Read `references/routing.md` before processing any user message.** It defines how to decompose compound messages, where each type of user input should be routed, and the rule against saving job search data to Claude memory.
+
 ## Core Files
 
 Always read these fresh at the start of each operation — the user may have edited them by hand:
@@ -66,6 +70,7 @@ For each role type, search the web for matching roles:
 - Priority sources from `filters.yaml` first
 - Career pages of target companies
 - General job boards with role type keywords + location
+- **If `industries` is set**: append industry terms to job board queries as context keywords (e.g., "Technical Program Manager" + "water utilities"). This surfaces roles at companies in preferred sectors that might otherwise be missed by title-only searches.
 
 **Update the user after each source or batch of sources:**
 > "Searching LinkedIn for [role type]... found 12 candidates."
@@ -218,6 +223,7 @@ Read `references/decline-learning.md` for the full process. After each decline o
 
 ## Additional Resources
 
+- **`references/routing.md`** — compound message decomposition and anti-memory rules (read first)
 - **`references/fit-assessment.md`** — structured assessment framework
 - **`references/brief-format.md`** — search brief template
 - **`references/decline-learning.md`** — filter updates from declines

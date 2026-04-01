@@ -38,6 +38,22 @@ For the matched role type, read its `experience_mapping` and compare against the
 
 Also check the user's `profile.yaml` evidence (resume URL, portfolio, additional context) for supporting detail.
 
+## Step 3b: Industry Interest Boost
+
+Read `filters.yaml` `industries`. If the list exists and is non-empty, check whether the company operates in a listed sector.
+
+**How to check:** Look at the company's description, product, or customer base from the JD or a quick web search. A company doesn't need to be named after the industry — a software company whose customers are water utilities counts as a match for "water utilities."
+
+**If the company matches an industry interest:**
+
+1. Add a line to the **Positive Fit** section: `- **Industry match**: operates in [industry], which is on your interest list`
+2. Nudge the recommendation **up one tier** for borderline cases: Pass → Stretch, Stretch → Moderate. (Don't boost Strong — it's already strong. Don't boost a hard constraint failure — comp/location/seniority still gate.)
+3. Tag the candidate with the matched industry so it appears in the search brief's Industry Match Report
+
+> Example: User has "water utilities" in industries. A role at a company building SCADA systems for water treatment plants gets a positive mention and a tier boost even if the exact title doesn't match a target role type.
+
+**If `industries` is empty or missing**, skip this step entirely.
+
 ## Step 4: Company Health Check
 
 Research the company briefly:

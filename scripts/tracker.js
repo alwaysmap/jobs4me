@@ -304,7 +304,7 @@ function writeArchetypes(dir, doc) {
 function readFilters(dir) {
   const p = filtersPath(dir);
   if (!fs.existsSync(p)) {
-    return { sources: [], target_companies: [], skip_companies: [], watch: [], decline_patterns: [] };
+    return { sources: [], target_companies: [], skip_companies: [], watch: [], industries: [], decline_patterns: [] };
   }
   const raw = yaml.load(fs.readFileSync(p, 'utf8')) || {};
   // Normalize legacy key names → canonical
@@ -313,6 +313,7 @@ function readFilters(dir) {
     target_companies: raw.include?.target_companies || raw.target_companies || [],
     skip_companies:   raw.skip_companies || raw.skip || [],
     watch:            raw.watch || [],
+    industries:       raw.industries || [],
     decline_patterns: raw.decline_patterns || [],
   };
 }
@@ -591,6 +592,7 @@ function buildConfigData(dir) {
   config.sources          = filters.include?.sources || filters.sources || [];
   config.target_companies = filters.include?.target_companies || filters.target_companies || [];
   config.watch            = filters.watch || [];
+  config.industries       = filters.industries || [];
   config.skip             = filters.skip || filters.skip_companies || [];
   config.decline_patterns = filters.decline_patterns || [];
 
@@ -950,7 +952,7 @@ const commands = {
     const doc = readFilters(dir);
 
     // Replace each provided key wholesale
-    for (const key of ['sources', 'target_companies', 'skip_companies', 'watch', 'decline_patterns']) {
+    for (const key of ['sources', 'target_companies', 'skip_companies', 'watch', 'industries', 'decline_patterns']) {
       if (updates[key] !== undefined) doc[key] = updates[key];
     }
 
@@ -960,7 +962,7 @@ const commands = {
 
   'update-filter-list'(dir, args) {
     const list = args.list;
-    const allowed = ['target_companies', 'skip_companies', 'watch'];
+    const allowed = ['target_companies', 'skip_companies', 'watch', 'industries'];
     if (!allowed.includes(list)) {
       throw new Error(`--list must be one of: ${allowed.join(', ')}`);
     }
@@ -1055,6 +1057,7 @@ const commands = {
           target_companies: ['string'],
           skip_companies: ['string'],
           watch: ['string'],
+          industries: ['string — sectors/domains of interest, used to weight search results'],
           decline_patterns: [{
             pattern: 'string (REQUIRED)',
             learned_from: 'string',
