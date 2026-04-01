@@ -121,10 +121,17 @@
   .settings-overlay.visible { display: flex; }
   .settings-panel { background: #fff; width: 80%; max-width: 1100px; min-width: 340px; height: 100%; overflow-y: auto; box-shadow: -4px 0 20px rgba(0,0,0,0.2); padding: 24px 32px 40px; position: relative; animation: slideIn 0.2s ease-out; }
   .config-section { background: #fff; border-radius: 10px; padding: 16px 20px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
-  .config-section h3 { font-size: 0.85rem; font-weight: 700; color: #1a1a2e; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.04em; }
-  .config-section details summary { cursor: pointer; font-size: 0.78rem; color: #64748b; margin-bottom: 8px; }
-  .config-section details summary:hover { color: #334155; }
-  .config-section details[open] summary { margin-bottom: 10px; }
+  .config-section h3 { font-size: 0.85rem; font-weight: 700; color: #1a1a2e; margin-bottom: 0; text-transform: uppercase; letter-spacing: 0.04em; display: inline; }
+  .config-section details > summary { cursor: pointer; font-size: 0.78rem; color: #64748b; margin-bottom: 0; list-style: none; display: flex; align-items: baseline; gap: 10px; }
+  .config-section details > summary::-webkit-details-marker { display: none; }
+  .config-section details > summary::before { content: '▸'; font-size: 0.75rem; color: #94a3b8; flex-shrink: 0; transition: transform 0.15s; }
+  .config-section details[open] > summary::before { transform: rotate(90deg); }
+  .config-section details > summary:hover { color: #334155; }
+  .config-section details[open] > summary { margin-bottom: 12px; }
+  .config-summary { font-size: 0.75rem; color: #94a3b8; }
+  .source-group { margin-bottom: 6px; font-size: 0.82rem; color: #334155; line-height: 1.6; }
+  .source-link { color: #2563eb; text-decoration: none; font-size: 0.8rem; }
+  .source-link:hover { text-decoration: underline; }
   .config-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
   .config-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; }
   .config-card .cc-title { font-weight: 600; font-size: 0.85rem; color: #334155; margin-bottom: 4px; }
@@ -136,6 +143,7 @@
   .config-tag.watch { background: #fef9c3; color: #854d0e; }
   .config-tag.skip { background: #fee2e2; color: #991b1b; }
   .config-tag.decline { background: #fce7f3; color: #9d174d; }
+  .config-tag.industry { background: #e0f2fe; color: #0369a1; }
   .config-tag.archetype { background: #ede9fe; color: #5b21b6; }
   .config-empty { font-size: 0.78rem; color: #94a3b8; font-style: italic; }
   .config-row { display: flex; gap: 16px; margin-bottom: 16px; }
@@ -603,9 +611,9 @@ function renderConfig() {
   let html = '';
   const pb = 'privacy-blur';
 
-  // Archetypes (collapsible)
+  // Archetypes
   if (config.archetypes && config.archetypes.length > 0) {
-    html += `<div class="config-section"><h3>Role Types</h3><details><summary>${config.archetypes.length} role type${config.archetypes.length === 1 ? '' : 's'} configured</summary><div class="config-grid ${pb}">`;
+    html += `<div class="config-section"><details><summary><h3>Role Types</h3><span class="config-summary">${config.archetypes.length} role type${config.archetypes.length === 1 ? '' : 's'} configured</span></summary><div class="config-grid ${pb}">`;
     config.archetypes.forEach(a => {
       const titles = (a.titles || []).map(t => `<span class="config-tag archetype">${esc(t)}</span>`).join('');
       const keywords = (a.keywords || []).map(k => `<span class="config-tag">${esc(k)}</span>`).join('');
@@ -618,66 +626,104 @@ function renderConfig() {
     html += '</div></details></div>';
   }
 
-  // Sources + Target Companies row
-  html += '<div class="config-row">';
-
-  // Sources
-  html += `<div class="config-section"><h3>Search Sources</h3><div class="${pb}">`;
+  // Sources — grouped by type, comma-separated linked names
   if (config.sources && config.sources.length > 0) {
+    const byType = {};
     config.sources.forEach(s => {
-      const typeTag = s.type ? `<span class="config-tag source">${esc(s.type)}</span>` : '';
-      const url = s.url ? ` <a href="${esc(s.url)}" target="_blank" style="font-size:0.72rem;color:#2563eb;">&rarr;</a>` : '';
-      html += `<div style="margin-bottom:4px">${typeTag} <span style="font-size:0.82rem;color:#334155;">${esc(s.name || s.url || 'Unnamed')}</span>${url}</div>`;
+      const t = s.type || 'other';
+      if (!byType[t]) byType[t] = [];
+      byType[t].push(s);
     });
-  } else {
-    html += '<span class="config-empty">No sources configured</span>';
-  }
-  html += '</div></div>';
-
-  // Target Companies + Watch
-  html += `<div class="config-section"><h3>Companies</h3><div class="${pb}">`;
-  html += '<div class="cc-detail" style="margin-bottom:8px"><span class="cc-label">Targets</span><br>';
-  html += tags(config.target_companies, 'target');
-  html += '</div>';
-  html += '<div class="cc-detail"><span class="cc-label">Watching</span><br>';
-  html += tags(config.watch, 'watch');
-  html += '</div></div></div>';
-
-  html += '</div>'; // end config-row
-
-  // Skip + Decline Patterns row
-  html += '<div class="config-row">';
-
-  html += `<div class="config-section"><h3>Skip List</h3><div class="${pb}">`;
-  html += tags(config.skip, 'skip');
-  html += '</div></div>';
-
-  html += `<div class="config-section"><h3>Decline Patterns</h3><div class="${pb}">`;
-  if (config.decline_patterns && config.decline_patterns.length > 0) {
-    config.decline_patterns.forEach(p => {
-      const text = typeof p === 'string' ? p : (p.pattern || JSON.stringify(p));
-      const from = (typeof p === 'object' && p.learned_from) ? ` <span style="font-size:0.7rem;color:#94a3b8;">(from ${esc(p.learned_from)})</span>` : '';
-      html += `<div style="margin-bottom:4px"><span class="config-tag decline">${esc(text)}</span>${from}</div>`;
+    const typeOrder = ['career_page', 'job_board', 'org_portfolio', 'curated_list', 'aggregator', 'other'];
+    const sortedTypes = typeOrder.filter(t => byType[t]);
+    html += `<div class="config-section"><details><summary><h3>Search Sources</h3><span class="config-summary">${config.sources.length} source${config.sources.length === 1 ? '' : 's'} across ${sortedTypes.length} type${sortedTypes.length === 1 ? '' : 's'}</span></summary><div class="${pb}">`;
+    sortedTypes.forEach(type => {
+      const items = byType[type];
+      const links = items.map(s => {
+        const name = esc(s.name || s.url || 'Unnamed');
+        return s.url ? `<a href="${esc(s.url)}" target="_blank" class="source-link">${name}</a>` : `<span class="source-link">${name}</span>`;
+      }).join(', ');
+      html += `<div class="source-group"><span class="config-tag source">${esc(type)}</span> ${links}</div>`;
     });
+    html += '</div></details></div>';
   } else {
-    html += '<span class="config-empty">None yet — patterns are learned from your declines</span>';
+    html += '<div class="config-section"><details><summary><h3>Search Sources</h3><span class="config-summary config-empty">No sources configured</span></summary></details></div>';
   }
-  html += '</div></div>';
 
-  html += '</div>'; // end config-row
+  // Companies: Targets + Watch + Industries
+  {
+    const targetCount = (config.target_companies || []).length;
+    const watchCount = (config.watch || []).length;
+    const industryCount = (config.industries || []).length;
+    const parts = [];
+    if (targetCount) parts.push(`${targetCount} target${targetCount === 1 ? '' : 's'}`);
+    if (watchCount) parts.push(`${watchCount} watching`);
+    if (industryCount) parts.push(`${industryCount} industr${industryCount === 1 ? 'y' : 'ies'}`);
+    const summary = parts.length > 0 ? parts.join(', ') : 'None configured';
 
-  // Preferences summary
+    html += `<div class="config-section"><details><summary><h3>Companies & Industries</h3><span class="config-summary">${summary}</span></summary><div class="${pb}">`;
+    html += '<div class="cc-detail" style="margin-bottom:8px"><span class="cc-label">Targets</span><br>';
+    html += tags(config.target_companies, 'target');
+    html += '</div>';
+    html += '<div class="cc-detail" style="margin-bottom:8px"><span class="cc-label">Watching</span><br>';
+    html += tags(config.watch, 'watch');
+    html += '</div>';
+    if (industryCount > 0) {
+      html += '<div class="cc-detail"><span class="cc-label">Industry Interests</span><br>';
+      html += tags(config.industries, 'industry');
+      html += '</div>';
+    }
+    html += '</div></details></div>';
+  }
+
+  // Skip + Decline Patterns
+  {
+    const skipCount = (config.skip || []).length;
+    const patternCount = (config.decline_patterns || []).length;
+    const parts = [];
+    if (skipCount) parts.push(`${skipCount} skipped`);
+    if (patternCount) parts.push(`${patternCount} pattern${patternCount === 1 ? '' : 's'}`);
+    const summary = parts.length > 0 ? parts.join(', ') : 'None yet';
+
+    html += `<div class="config-section"><details><summary><h3>Filters</h3><span class="config-summary">${summary}</span></summary><div class="config-row">`;
+
+    html += `<div style="flex:1"><div class="cc-detail"><span class="cc-label">Skip List</span><br><div class="${pb}">`;
+    html += tags(config.skip, 'skip');
+    html += '</div></div></div>';
+
+    html += `<div style="flex:1"><div class="cc-detail"><span class="cc-label">Decline Patterns</span><br><div class="${pb}">`;
+    if (patternCount > 0) {
+      config.decline_patterns.forEach(p => {
+        const text = typeof p === 'string' ? p : (p.pattern || JSON.stringify(p));
+        const from = (typeof p === 'object' && p.learned_from) ? ` <span style="font-size:0.7rem;color:#94a3b8;">(from ${esc(p.learned_from)})</span>` : '';
+        html += `<div style="margin-bottom:4px"><span class="config-tag decline">${esc(text)}</span>${from}</div>`;
+      });
+    } else {
+      html += '<span class="config-empty">None yet — patterns are learned from your declines</span>';
+    }
+    html += '</div></div></div>';
+
+    html += '</div></details></div>';
+  }
+
+  // Preferences
   if (config.preferences) {
     const p = config.preferences;
-    html += `<div class="config-section"><h3>Preferences</h3><div class="config-grid ${pb}">`;
+    const parts = [];
+    if (p.comp_floor_usd) parts.push(`$${Number(p.comp_floor_usd).toLocaleString()}+`);
+    if (p.seniority_floor) parts.push(p.seniority_floor + '+');
+    if (p.locations) parts.push((p.locations || []).join(', '));
+    const summary = parts.length > 0 ? parts.join(' · ') : '';
+
+    html += `<div class="config-section"><details><summary><h3>Preferences</h3><span class="config-summary">${esc(summary)}</span></summary><div class="config-grid ${pb}">`;
     if (p.comp_floor_usd) html += `<div class="config-card"><div class="cc-title">Comp Floor</div><div class="cc-detail">$${Number(p.comp_floor_usd).toLocaleString()}+${p.comp_exceptions ? ` <span style="font-size:0.72rem;color:#94a3b8;">(${esc(p.comp_exceptions)})</span>` : ''}</div></div>`;
     if (p.max_travel_pct != null) html += `<div class="config-card"><div class="cc-title">Max Travel</div><div class="cc-detail">${p.max_travel_pct}%</div></div>`;
     if (p.locations) html += `<div class="config-card"><div class="cc-title">Locations</div><div class="cc-detail">${(p.locations || []).map(l => esc(l)).join(', ')}</div></div>`;
     if (p.seniority_floor) html += `<div class="config-card"><div class="cc-title">Seniority Floor</div><div class="cc-detail">${esc(p.seniority_floor)}</div></div>`;
-    html += '</div></div>';
+    html += '</div></details></div>';
   }
 
-  // Career evidence (collapsible)
+  // Career evidence
   if (config.evidence) {
     const ev = config.evidence;
     const items = [];
@@ -699,7 +745,7 @@ function renderConfig() {
     }
     const complete = ev.evidence_complete === true ? ' <span style="font-size:0.72rem;color:#16a34a;">✓ complete</span>' : ev.evidence_complete === false ? ' <span style="font-size:0.72rem;color:#d97706;">incomplete — add more with /tweak</span>' : '';
     const count = (ev.case_studies || []).length + (ev.portfolio_urls || []).length + (ev.resume_url ? 1 : 0);
-    html += `<div class="config-section"><h3>Career Evidence${complete}</h3><details><summary>${count} item${count === 1 ? '' : 's'}</summary><div class="${pb}">`;
+    html += `<div class="config-section"><details><summary><h3>Career Evidence${complete}</h3><span class="config-summary">${count} item${count === 1 ? '' : 's'}</span></summary><div class="${pb}">`;
     html += items.join('');
     html += '</div></details></div>';
   }
