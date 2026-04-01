@@ -160,9 +160,9 @@ The brief is the user's record of what happened in each search. It's viewable on
 
 ### Phase 4: Ready for review
 
+**MANDATORY: Present the kanban board.** Use `present_files` to share `Kanban/index.html` with the user. This is how they visualize the brief and all jobs — it must always be the final artifact of a search.
+
 > **Search complete.** Found {N} new roles across {M} companies.
->
-> Your board is at `Kanban/index.html` — open it to see everything.
 >
 > Want to review the new suggestions now? I'll show each one and you can say yes, no, or skip.
 

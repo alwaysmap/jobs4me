@@ -70,6 +70,8 @@ The board auto-rebuilds on every tracker mutation. There is no need to check fre
 
 Always tell the user to open or refresh the board after any operation that changes their pipeline — search sweeps, stage changes, declines, review sessions. The board is always current because it auto-rebuilds on every mutation. The user should never need to run `/board` manually unless they want to force a rebuild after editing YAML files by hand.
 
+**After every `/search` command:** The kanban board MUST be presented as a file via `present_files` at the end of every search. The board is how users check out the brief and visualize all jobs — this is non-negotiable.
+
 **IMPORTANT: How to share the board (and all files) with the user.**
 
 Use `present_files` to share the board and any other generated files with the user. **NEVER use markdown links** to local file paths — they render as broken links in Cowork.
