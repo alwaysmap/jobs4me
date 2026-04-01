@@ -1,22 +1,50 @@
 ---
 title: Installation
-summary: Install the plugin in Claude Desktop or Claude.ai.
+summary: Install the plugin in Claude Desktop, Claude.ai, or Claude Code.
 weight: 1
 ---
 
 ## Requirements
 
-- Claude Desktop or Claude.ai with Cowork mode
+- Claude Desktop, Claude.ai with Cowork mode, or Claude Code (CLI)
 - A Claude Pro or Max subscription
 
-## Install from zip
+## Install from the marketplace (Claude Code)
+
+If you have [Claude Code](https://docs.anthropic.com/en/docs/claude-code) installed, you can install the plugin directly from the command line.
+
+**Add the marketplace and install:**
+
+```bash
+# Add the jobs4me marketplace
+claude plugin marketplace add alwaysmap/jobs4me
+
+# Update marketplace listings
+claude plugin marketplace update
+
+# List available plugins
+claude plugin marketplace list
+
+# Install the plugin
+claude plugin install jfm@jobs4me
+```
+
+**Verify the installation:**
+
+```bash
+claude plugin list
+```
+
+Start a new Claude Code session and select a folder for your job search data.
+
+## Install from zip (Claude Desktop / Claude.ai)
 
 1. Download `jobs-for-me.zip` from [the latest release](https://github.com/alwaysmap/jobs4me/releases/latest)
 2. In Claude, go to **Customize > Personal plugins > +**
 3. Upload the zip file
 4. Start a new Cowork session and select a folder for your job search data
 
-That's it. No dependencies to install, no API keys, no configuration files to edit.
+Either way — no dependencies to install, no API keys, no configuration files to edit.
 
 ## Choose your data folder
 
@@ -50,7 +78,19 @@ This serves the board over HTTPS on your tailnet, accessible from any device. Th
 
 ## Updating
 
-When a new version is released:
+### Claude Code (CLI)
+
+```bash
+# Update marketplace listings
+claude plugin marketplace update
+
+# Update the plugin
+claude plugin update jfm@jobs4me
+```
+
+Restart Claude Code to apply the update.
+
+### Claude Desktop / Claude.ai
 
 1. Download the new `jobs-for-me.zip` from [releases](https://github.com/alwaysmap/jobs4me/releases/latest)
 2. In Claude, go to **Customize > Personal plugins**
