@@ -70,15 +70,17 @@ The board auto-rebuilds on every tracker mutation. There is no need to check fre
 
 Always tell the user to open or refresh the board after any operation that changes their pipeline — search sweeps, stage changes, declines, review sessions. The board is always current because it auto-rebuilds on every mutation. The user should never need to run `/board` manually unless they want to force a rebuild after editing YAML files by hand.
 
-**IMPORTANT: How to link to the board in messages to the user.**
+**IMPORTANT: How to share the board (and all files) with the user.**
 
-Use a markdown link with the **actual resolved file path** from the workspace. Get the path from the `build-board` command output (the `built` field) or construct it as `{workspace}/Kanban/index.html`.
+Use `present_files` to share the board and any other generated files with the user. **NEVER use markdown links** to local file paths — they render as broken links in Cowork.
 
-Correct: `Your board is updated — open [Kanban/index.html](/actual/workspace/path/Kanban/index.html) to see the changes.`
+After every board rebuild, call `present_files` with the path to `Kanban/index.html`:
 
-WRONG: `[your Kanban board](https://drive.google.com/drive/folders/Job Search/Kanban/index.html)` — NEVER guess or construct URLs. Use the actual file path from the workspace, not a URL you invented. Google Drive mount paths are NOT web URLs.
+```
+present_files(["${JFM_DIR}/Kanban/index.html"])
+```
 
-The same rule applies to all file links (overviews, prep docs, cover letters, briefs): use the real file path, never a guessed URL.
+The same rule applies to ALL generated files (overviews, prep docs, cover letters, briefs, resumes): always use `present_files`, never markdown links.
 
 ## Data Format
 

@@ -63,7 +63,7 @@ Generate application materials — a cover letter and optionally a tailored resu
     > {If tailored resume was also created:}
     > **Tailored resume** — `{role_dir}/resume.md`
     >
-    > Your board has been updated — open `Kanban/index.html` to see the change.
+    Use `present_files` to share the created files and `Kanban/index.html` with the user.
 
     Iterate if they give feedback — update the file and show the revised version inline.
 

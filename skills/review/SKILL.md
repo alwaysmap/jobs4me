@@ -174,8 +174,8 @@ node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js needs-research
 If there are companies needing research, offer to do it:
 > {N} companies need research (Oracle, Databricks). Want me to generate company overviews now, or would you rather do it later with `/prep`?
 
-If yes, generate overviews inline with progress updates. After each overview is written, show the user what was created:
-> **Oracle — Company Overview** — `companies/Oracle/overview.md`
+If yes, generate overviews inline with progress updates. After each overview is written, use `present_files` to share it, then summarize:
+> **Oracle — Company Overview** created
 > {2-3 line summary: what they do, market position, why this role exists}
 
 If the user moved any role to Interviewing, also offer full interview prep via `/prep`.

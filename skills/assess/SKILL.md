@@ -34,10 +34,10 @@ Assess a specific job posting against the user's profile.
    ```
    This returns `role_dir` and `company_dir`. Save the JD to `{role_dir}/jd.md`. Create the directories if they don't exist (`mkdir -p`).
 
-   After saving, tell the user what was created:
+   After saving, use `present_files` to share the board with the user, then tell them what was created:
    > **Added to tracker** — {Company} / {Role}
    > **JD saved** — `{role_dir}/jd.md`
-   > Your board has been updated — open `Kanban/index.html` to see it.
+   > Your board has been updated — refresh to see it.
 9. **If declining** (user says "not interested", "pass", "decline", etc.):
    - If already added to tracker, decline it:
      ```bash
@@ -53,7 +53,7 @@ Assess a specific job posting against the user's profile.
      node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js add-decline-pattern --pattern "Pattern description" --learned-from "Company Name"
      ```
      Tell the user what filter change was made (if any).
-   Your board has been updated — open `Kanban/index.html` to see the change.
+   Use `present_files` to share `Kanban/index.html`, then tell the user: "Your board has been updated."
 
 10. **Auto company research** — after adding a non-declined role, check if this company already has research:
     ```bash

@@ -137,14 +137,11 @@ node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js needs-research
 ```
 For each company needing research, generate a Company Overview inline (see prep skill's "Company Overview" section). Save to `{company_dir}/overview.md`. One overview per company — skip companies that already have one.
 
-Keep it fast — each overview should take 1-2 minutes of web search + writing. After each overview, show the user what was created:
-> **Oracle — Company Overview** — `companies/Oracle/overview.md`
+Keep it fast — each overview should take 1-2 minutes of web search + writing. After each overview, use `present_files` to share the overview file, then summarize:
+> **Oracle — Company Overview** created
 > {2-3 line summary: what they do, revenue model, why this role exists}
->
-> **Databricks — Company Overview** — `companies/Databricks/overview.md`
-> {2-3 line summary}
 
-After all research is complete, rebuild the board one final time so overviews are embedded:
+After all research is complete, rebuild the board one final time so overviews are embedded, then use `present_files` to share `Kanban/index.html`:
 ```bash
 node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js build-board
 ```

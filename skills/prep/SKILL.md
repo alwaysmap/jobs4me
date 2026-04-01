@@ -56,7 +56,8 @@ Create research documents that help the user walk into an interview with company
    > {Show a 3-4 line summary: number of topics covered, key areas, questions to ask}
    >
    > Read the full docs in `{company_dir}/` or click the links on your board.
-   > Your board has been updated — open `Kanban/index.html` to see everything.
+
+   Use `present_files` to share the created files and `Kanban/index.html` with the user.
 
 If no company name is provided, check the tracker for roles in any non-terminal stage and list them, prioritizing `interviewing` and `applied`:
 

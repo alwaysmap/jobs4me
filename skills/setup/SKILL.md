@@ -252,7 +252,9 @@ Create empty directories: `active/`, `declined/`, `briefs/`
 
 Then trigger the search skill. After the sweep completes:
 
-> **Found {N} roles** that look like potential matches. Your board is ready — open `Kanban/index.html` to see them.
+> **Found {N} roles** that look like potential matches. Your board is ready.
+
+Use `present_files` to share `Kanban/index.html` with the user.
 >
 > Want to walk through them now? I'll show each one and you can tell me yes, no, or skip. This first review helps me learn what you actually want — your reactions make future searches better.
 

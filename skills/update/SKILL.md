@@ -74,7 +74,7 @@ Common shorthand the user might use (map these to stages):
    Preserve existing notes — append the new note with a date stamp.
 
 4. **Post-update actions**:
-   - After every stage change or decline, tell the user: "Your board has been updated — open `Kanban/index.html` to see the change."
+   - After every stage change or decline, use `present_files` to share `Kanban/index.html`, then tell the user: "Your board has been updated."
    - If new stage is `applied`, suggest running `/apply` to generate a cover letter if they haven't already
    - If new stage is `interviewing`, suggest running `/prep` for that company
    - If new stage is `rejected` or `closed`, acknowledge briefly — don't over-sympathize, just confirm and move on

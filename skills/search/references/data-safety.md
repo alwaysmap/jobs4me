@@ -110,21 +110,17 @@ Only markdown content files — never YAML config:
 
 ## Surfacing Created Files
 
-**REQUIRED: Every time you create or update a document, show the user what was created.** Never silently write a file. After writing any document (overview, prep, JD, cover letter, brief), tell the user:
+**REQUIRED: Every time you create or update a document, present it to the user with `present_files`.** Never silently write a file. After writing any document (overview, prep, JD, cover letter, brief, board):
 
-1. **What was created** — document type and a 2-3 line summary of the content
-2. **Where it lives** — the file path so they can find it
-3. **How to access it** — mention the board if the doc is viewable there
+1. **Call `present_files`** with the file path(s) so the user can open them directly
+2. **Summarize what was created** — document type and a 2-3 line summary of the content
+3. **Mention the board** if the doc is viewable there
 
-Example:
-> **Company Overview** — `companies/Oracle/overview.md`
-> Oracle is a $50B enterprise cloud + database company pivoting hard to AI infrastructure. Strong engineering culture in the cloud org. This role exists because they're scaling their strategic customers team.
->
-> **Interview Prep** — `companies/Oracle/2026-03-30-sr-principal-tpm/prep.md`
-> Covers 6 likely interview topics with mapped stories from your background, plus 5 questions to ask them.
->
-> Both are viewable on your board — open `Kanban/index.html` and click the role card.
+**NEVER use markdown links** to local file paths — they render as broken links in Cowork. Always use `present_files` instead.
 
-This applies to ALL skills that write files — search (JDs, briefs, overviews), prep (overview, prep), apply (cover letter, resume), assess (JD, overview).
+Example flow:
+1. Write files
+2. Call `present_files(["${JFM_DIR}/companies/Oracle/overview.md", "${JFM_DIR}/companies/Oracle/2026-03-30-sr-principal-tpm/prep.md", "${JFM_DIR}/Kanban/index.html"])`
+3. Tell the user: "Created company overview and interview prep for Oracle. Both are viewable on your board — click the role card to read them."
 
-**When linking to files, use the actual workspace file path.** Always use the real resolved path (e.g., from `tracker.js paths` output or `JFM_DIR`). NEVER guess or construct URLs — Google Drive mount paths, Cowork session paths, etc. are not web URLs. If you don't know the exact path, use the filename in backticks without a link rather than guessing.
+This applies to ALL skills that write files — search (JDs, briefs, overviews), prep (overview, prep), apply (cover letter, resume), assess (JD, overview), board (Kanban/index.html).
