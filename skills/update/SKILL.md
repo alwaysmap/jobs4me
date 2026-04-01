@@ -103,6 +103,22 @@ Save a summary of the offer evaluation to `{role_dir}/offer-notes.md`.
 
 Don't be sycophantic about the offer. Be happy for them, then immediately be useful.
 
+## Compound requests — config changes alongside status updates
+
+Users often mention configuration changes while updating a role: "decline Cognite but add them to my watch list" or "not interested in this role but my work at Woolpert is relevant to companies like this."
+
+**After handling the pipeline action (stage change, decline), scan the rest of the message for:**
+
+- **Company interest** ("the company is interesting", "watch this one", "keep an eye on") → add to watch list via `update-filter-list --list watch --add '["Company"]'`
+- **Industry interest** ("companies like this", "this sector is interesting") → add to industries via `update-filter-list --list industries --add '["industry"]'`
+- **Career evidence** ("my experience at X includes...", "my project history at Y") → ask a focused follow-up, then save to profile.yaml via `set-profile`
+- **URLs** — fetch them. Blog/portfolio → evidence. Careers page → offer as source. Job posting → offer to assess.
+- **Source additions** ("add their careers page") → add to filters.yaml sources via `set-filters`
+
+Handle the pipeline action first, then address each secondary intent. Confirm each change individually. Don't silently drop any part of the user's message.
+
+See CLAUDE.md for the full routing decision tree.
+
 ## No arguments — show active roles
 
 If no arguments are provided (user just typed `/update`), list their active roles so they can pick one:

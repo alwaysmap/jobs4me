@@ -229,6 +229,24 @@ After the last role (or when the user says "done" / "that's enough"):
 
 > You've got {N} roles sitting in Maybe. Want to do a quick `/review maybe` to advance or prune them?
 
+## Compound requests during review
+
+During a review session, users may mention things beyond simple yes/no/decline decisions:
+
+- **"Decline, but the company is interesting"** → decline the role AND add the company to the watch list
+- **"Not this role, but companies in this space..."** → decline AND add the industry to filters.yaml industries list
+- **"My experience at [company] is relevant here"** → note it, and after the review session ends, circle back to capture it as career evidence in profile.yaml
+- **URLs shared during review** → note them, handle after the session (don't break review flow)
+
+**During the review:** handle quick config changes (watch list, skip list, industry adds) inline — they're one command each. Defer evidence capture and URL processing to after the review ends.
+
+**After the review summary**, address any deferred items:
+> You also mentioned some things I want to capture:
+> - Your experience at Woolpert with water utilities — can you tell me more so I can add it to your profile?
+> - The link you shared — let me fetch that and see what's relevant.
+
+See CLAUDE.md for the full routing decision tree.
+
 ## Tone
 
 Brisk and efficient. This is a working session, not a conversation. Minimal commentary between roles. The user came here to make decisions fast — respect that by keeping the signal-to-noise ratio high.

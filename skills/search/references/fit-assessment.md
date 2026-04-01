@@ -38,6 +38,14 @@ For the matched role type, read its `experience_mapping` and compare against the
 
 Also check the user's `profile.yaml` evidence (resume URL, portfolio, additional context) for supporting detail.
 
+## Step 3b: Industry Interest Boost
+
+Check if the company operates in a sector listed in `filters.yaml` `industries`. If yes, note this as a positive signal in the assessment — a company in a sector the user is interested in gets a boost even if the role-type match isn't perfect.
+
+> Example: User has "water utilities" in industries. A role at a company building SCADA systems for water treatment plants gets a positive mention even if the exact title doesn't match a target role type.
+
+This is a soft signal, not a hard filter — it nudges borderline roles from Pass toward Stretch, or Stretch toward Moderate.
+
 ## Step 4: Company Health Check
 
 Research the company briefly:

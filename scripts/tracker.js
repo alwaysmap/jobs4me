@@ -950,7 +950,7 @@ const commands = {
     const doc = readFilters(dir);
 
     // Replace each provided key wholesale
-    for (const key of ['sources', 'target_companies', 'skip_companies', 'watch', 'decline_patterns']) {
+    for (const key of ['sources', 'target_companies', 'skip_companies', 'watch', 'industries', 'decline_patterns']) {
       if (updates[key] !== undefined) doc[key] = updates[key];
     }
 
@@ -960,7 +960,7 @@ const commands = {
 
   'update-filter-list'(dir, args) {
     const list = args.list;
-    const allowed = ['target_companies', 'skip_companies', 'watch'];
+    const allowed = ['target_companies', 'skip_companies', 'watch', 'industries'];
     if (!allowed.includes(list)) {
       throw new Error(`--list must be one of: ${allowed.join(', ')}`);
     }
@@ -1055,6 +1055,7 @@ const commands = {
           target_companies: ['string'],
           skip_companies: ['string'],
           watch: ['string'],
+          industries: ['string — sectors/domains of interest, used to weight search results'],
           decline_patterns: [{
             pattern: 'string (REQUIRED)',
             learned_from: 'string',

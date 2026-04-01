@@ -66,6 +66,19 @@ Assess a specific job posting against the user's profile.
 
 If no URL is provided, ask the user for one. They can also paste the JD text directly instead of a URL.
 
+## Compound requests during assessment
+
+Users may share additional context alongside a job posting: "check this role — my work at Woolpert is relevant here because of water utilities" or "assess this, and add the company to my watch list."
+
+**After the assessment, scan the rest of the message for:**
+
+- **Company interest** → add to watch list or target companies
+- **Industry interest** → add to filters.yaml industries list
+- **Career evidence** → ask a follow-up, save to profile.yaml
+- **Additional URLs** (careers page, blog post, portfolio) → route appropriately
+
+Handle the assessment first, then address secondary intents. See CLAUDE.md for the full routing decision tree.
+
 ## Decline Pattern Learning
 
 Any time a role is declined — whether during assessment, review, update, or any other flow — consider whether the decline reason represents a generalizable pattern. Read `search/references/decline-learning.md` for the full process. The key question: **would this reason apply to future roles too?** If yes, add or refine a decline pattern. If it's a one-off, just note it and move on.

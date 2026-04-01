@@ -96,6 +96,9 @@ skip_companies:                        # top-level array of strings (NOT skip)
 watch:                                 # top-level array of strings
   - "Company to Flag When Seen"
 
+industries:                            # top-level array of strings
+  - "Sector or domain of interest"     # used to weight search results favorably
+
 decline_patterns:                      # top-level array of objects
   - pattern: "Pattern description"    # REQUIRED - what to match against
     learned_from: "Company Name"      # optional - which decline taught this
@@ -104,6 +107,7 @@ decline_patterns:                      # top-level array of objects
 ### Notes
 - Sources are at the TOP LEVEL: `sources:`, not `include.sources:`
 - Skip list is `skip_companies:`, not `skip:`
+- `industries` captures positive sector/domain interests (e.g., "water utilities", "industrial data", "civic tech"). Used by the search agent to weight companies in these sectors more favorably. Managed via `update-filter-list --list industries --add/--remove`.
 - `decline_patterns` are learned automatically from `/update Company - decline reason`
 - Source `type` determines search behavior:
   - `job_board` / `aggregator` — searched with role type keywords + location
