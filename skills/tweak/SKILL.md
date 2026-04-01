@@ -14,6 +14,8 @@ user_summary: >
 
 # Tweak Configuration
 
+**Read `search/references/routing.md` before processing any user message** — it defines where each type of input should be routed and the rule against saving job search data to Claude memory.
+
 Help the user make targeted changes to their setup without re-running the full onboarding. This is the "come back and adjust anything" command.
 
 ## Start
@@ -78,10 +80,16 @@ After adding, explain how this affects searches:
 
 > Got it — added "water utilities" and "industrial data" to your industry interests. I'll weight companies in these sectors more favorably in future searches.
 
-If the industry interest was triggered by a specific company, also consider:
-- Adding that company to the watch list
-- Adding their careers page as a source
-- Checking if existing role types need keyword updates to capture roles in this sector
+**After adding an industry, always do these follow-ups:**
+
+1. **Suggest sources** — search for job boards, associations, or directories specific to that sector. Present 2-3 concrete suggestions:
+   > "For water utilities, you might want to add: **AWWA Career Center** (awwa.org/careers — job_board), **WaterWorld** (waterworld.com/careers — aggregator), or individual utility career pages. Want me to add any of these?"
+
+2. **Check the watch list** — if a specific company triggered the interest, add it to the watch list (and offer to add its careers page as a source)
+
+3. **Check role types** — do any existing role types in `archetypes.yaml` need keyword updates to capture roles in this sector? If the user targets "Technical Program Manager" roles, adding "utilities" or "infrastructure" to that role type's keywords helps surface relevant results. Confirm before changing.
+
+4. **Check career evidence** — does the user have experience in this industry? If they mentioned it ("my work at Woolpert with water utilities"), capture it as evidence. If they didn't mention specific experience, ask: "Do you have experience in this area, or is this a new interest?"
 
 ## Extracting evidence from casual mentions
 

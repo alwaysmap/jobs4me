@@ -18,6 +18,8 @@ user_summary: >
 
 **Shell setup:** The tracker script auto-detects the workspace directory. If needed, set `JFM_DIR` environment variable or use `--dir`.
 
+**Read `search/references/routing.md` before processing any user message** — it defines how to decompose compound messages and where to route each type of input.
+
 Walk the user through their tracked roles one at a time, grouped by what needs attention. This is a conversational triage — present a role, get a quick decision, apply it, kick off background work, move on.
 
 ## First Review Calibration
@@ -245,7 +247,7 @@ During a review session, users may mention things beyond simple yes/no/decline d
 > - Your experience at Woolpert with water utilities — can you tell me more so I can add it to your profile?
 > - The link you shared — let me fetch that and see what's relevant.
 
-See CLAUDE.md for the full routing decision tree.
+See `search/references/routing.md` for the full routing decision tree.
 
 ## Tone
 

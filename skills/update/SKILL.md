@@ -16,6 +16,8 @@ user_summary: >
 
 **Shell setup:** The tracker script auto-detects the workspace directory. Set `JFM_DIR` only if the path contains special characters.
 
+**Read `search/references/routing.md` before processing any user message** — it defines how to decompose compound messages and where to route each type of input.
+
 Update the stage or status of a tracked role, including declining roles.
 
 Parse the user's input as: `Company Name - status` with an optional note/reason after. Examples:
@@ -117,7 +119,7 @@ Users often mention configuration changes while updating a role: "decline Cognit
 
 Handle the pipeline action first, then address each secondary intent. Confirm each change individually. Don't silently drop any part of the user's message.
 
-See CLAUDE.md for the full routing decision tree.
+See `search/references/routing.md` for the full routing decision tree.
 
 ## No arguments — show active roles
 

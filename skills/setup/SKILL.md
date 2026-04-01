@@ -24,11 +24,13 @@ Walk the user through setting up their job search agent. This is a conversationa
 
 > Welcome back! You already have a profile set up. Let me check what's in place and what could use attention.
 >
-> {Summary of current state: profile ✓, role types ✓/✗, companies ✓/✗, sources ✓/✗, evidence_complete true/false}
+> {Summary of current state: profile ✓, role types ✓/✗, companies ✓/✗, sources ✓/✗, evidence_complete true/false, industries ✓/✗}
 >
 > What would you like to update or complete? You can also just tell me what you need — "add a new role type", "change my sources", "update my comp floor" — and I'll handle it.
 
 Then behave exactly like the tweak skill. Do not re-ask onboarding questions for sections that are already complete.
+
+**Upgrade detection:** When reading `filters.yaml` for a returning user, check for fields that may not exist in older configs. If `industries` is missing, it's fine — the field is optional and defaults to an empty list. Don't prompt the user to fill it unprovoked, but if they mention industry interests during the session, save them normally via `update-filter-list --list industries --add '["..."]'`. The tracker script handles the missing field gracefully.
 
 ---
 
@@ -199,7 +201,15 @@ Wait for answer. Then:
 
 > Any companies to skip? Former employers, bad cultures, types to avoid?
 
-Capture both. If they can't think of many:
+Capture both. Then ask about industries:
+
+> Are there specific industries or sectors you're drawn to? For example: "civic tech", "climate", "healthcare", "industrial data", "water utilities". This helps me find companies in those spaces even if they're not on your dream list yet.
+
+If they share industries, save them to `filters.yaml` via `update-filter-list --list industries`. If they skip:
+
+> No problem — I'll learn your preferences as we go. You can add industries anytime with `/tweak`.
+
+If they can't think of many companies:
 
 > No pressure — companies will surface as the agent searches. You can add dream companies anytime with `/tweak`.
 

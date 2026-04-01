@@ -14,6 +14,8 @@ user_summary: >
 
 **Shell setup:** The tracker script auto-detects the workspace directory. Set `JFM_DIR` only if the path contains special characters.
 
+**Read `search/references/routing.md` before processing any user message** — it defines how to decompose compound messages and where to route each type of input.
+
 Assess a specific job posting against the user's profile.
 
 ## Steps
@@ -77,7 +79,7 @@ Users may share additional context alongside a job posting: "check this role —
 - **Career evidence** → ask a follow-up, save to profile.yaml
 - **Additional URLs** (careers page, blog post, portfolio) → route appropriately
 
-Handle the assessment first, then address secondary intents. See CLAUDE.md for the full routing decision tree.
+Handle the assessment first, then address secondary intents. See `search/references/routing.md` for the full routing decision tree.
 
 ## Decline Pattern Learning
 
