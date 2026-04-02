@@ -1,15 +1,27 @@
 ---
 title: Installation
-summary: Install the plugin in Claude Desktop, Claude.ai, or Claude Code.
+summary: Install the plugin in Claude Desktop or Claude Code.
 weight: 1
 ---
 
 ## Requirements
 
-- Claude Desktop, Claude.ai with Cowork mode, or Claude Code (CLI)
+- Claude Desktop or Claude Code (CLI)
 - A Claude Pro or Max subscription
 
-## Install from the marketplace (Claude Code)
+## Desktop App Installation
+
+First, [install the Claude desktop app](https://claude.ai/download) if you haven't already.
+
+1. Go to **Customize > Plugins > Personal > + > Add marketplace**
+2. Paste the link to `alwaysmap/jobs4me` on GitHub
+3. Restart Claude Desktop (the initial sync can take a moment)
+4. Go back to **Plugins > Personal**, find **Jfm**, and click **+** to enable it
+5. Start a new Cowork session and select a folder for your job search data
+
+This method auto-updates — you'll always get the latest version without re-downloading. See [Managing plugins](https://docs.anthropic.com/en/docs/claude-ai/plugins#managing-plugins) in the Claude docs for more details.
+
+## Claude Code Installation
 
 If you have [Claude Code](https://docs.anthropic.com/en/docs/claude-code) installed, you can install the plugin directly from the command line.
 
@@ -37,20 +49,13 @@ claude plugin list
 
 Start a new Claude Code session and select a folder for your job search data.
 
-## Install from zip (Claude Desktop / Claude.ai)
-
-1. Download `jobs-for-me.zip` from [the latest release](https://github.com/alwaysmap/jobs4me/releases/latest)
-2. In Claude, go to **Customize > Personal plugins > +**
-3. Upload the zip file
-4. Start a new Cowork session and select a folder for your job search data
-
 Either way — no dependencies to install, no API keys, no configuration files to edit.
 
 ## Choose your data folder
 
 When you start a Cowork session, select a folder where your job search data will live. Good options:
 
-- A folder in **Google Drive**, **Dropbox**, or **iCloud** — your data syncs and backs up automatically
+- A folder in [Google Drive](https://www.google.com/drive/download/), [Dropbox](https://www.dropbox.com/install), or **iCloud** (built into macOS) — your data syncs and backs up automatically
 - Any local folder if you prefer to manage backups yourself
 
 Everything is plain YAML and markdown files — easy to read, easy to back up, and yours to keep.
@@ -78,7 +83,11 @@ This serves the board over HTTPS on your tailnet, accessible from any device. Th
 
 ## Updating
 
-### Claude Code (CLI)
+### Desktop App
+
+Updates happen automatically. Just start a new Cowork session to pick up the latest version (old sessions cache the previous version).
+
+### Claude Code
 
 ```bash
 # Update marketplace listings
@@ -89,12 +98,5 @@ claude plugin update jfm@jobs4me
 ```
 
 Restart Claude Code to apply the update.
-
-### Claude Desktop / Claude.ai
-
-1. Download the new `jobs-for-me.zip` from [releases](https://github.com/alwaysmap/jobs4me/releases/latest)
-2. In Claude, go to **Customize > Personal plugins**
-3. Delete the old plugin, then upload the new zip
-4. Start a new Cowork session (old sessions cache the previous version)
 
 Your data folder is untouched by plugin updates — only the plugin code changes.
