@@ -19,14 +19,14 @@ evidence:                              # REQUIRED section
   additional_context: |               # optional - block scalar, career narrative
     Free-form text about background...
   case_studies:                       # optional - array of objects
-    - name: "Project Title"           # REQUIRED in each case study
+    - title: "Project Title"           # REQUIRED in each case study
       company: "Company Name"         # optional
       date: "YYYY-MM"                # optional
       url: "https://..."             # optional - link to public artifact
       situation: "Context..."         # REQUIRED
       action: "What you did..."       # REQUIRED
       outcome: "Measurable result..." # REQUIRED
-      skills:                         # REQUIRED - array of strings
+      tags:                           # REQUIRED - array of strings
         - "skill tag"
   evidence_complete: true             # boolean - false means user should add more
 
@@ -46,7 +46,7 @@ preferences:                           # REQUIRED section
 ```
 
 ### Notes
-- `case_studies[].skills` are lowercase tags used for matching, not display
+- `case_studies[].tags` are lowercase tags used for matching, not display
 - `evidence_complete` drives the "/tweak to add more" prompt
 - `hard_nos.companies` is the profile-level skip list (also in filters.yaml)
 

@@ -726,27 +726,32 @@ function renderConfig() {
   // Career evidence
   if (config.evidence) {
     const ev = config.evidence;
-    const items = [];
-    if (ev.resume_url) items.push(`<div style="margin-bottom:6px"><span class="cc-label">Resume</span><br><a href="${esc(ev.resume_url)}" target="_blank" style="font-size:0.82rem;color:#2563eb;">${esc(ev.resume_url)}</a></div>`);
+    const cards = [];
+    if (ev.resume_url) {
+      const domain = ev.resume_url.replace(/^https?:\/\//, '').split('/')[0];
+      cards.push(`<div class="config-card"><div class="cc-title">Resume</div><div class="cc-detail"><a href="${esc(ev.resume_url)}" target="_blank" style="color:#2563eb;">${esc(domain)}</a></div></div>`);
+    }
     if (ev.portfolio_urls && ev.portfolio_urls.length > 0) {
-      const links = ev.portfolio_urls.map(u => {
+      ev.portfolio_urls.forEach(u => {
         const url = typeof u === 'string' ? u : u.url;
-        const desc = typeof u === 'object' && u.description ? ` — ${esc(u.description)}` : '';
-        return url ? `<a href="${esc(url)}" target="_blank" style="font-size:0.82rem;color:#2563eb;">${esc(url)}</a>${desc}` : '';
-      }).filter(Boolean).join('<br>');
-      if (links) items.push(`<div style="margin-bottom:6px"><span class="cc-label">Portfolio</span><br>${links}</div>`);
+        if (!url) return;
+        const desc = typeof u === 'object' && u.description ? u.description : null;
+        const domain = url.replace(/^https?:\/\//, '').split('/')[0];
+        cards.push(`<div class="config-card"><div class="cc-title">${esc(desc || domain)}</div><div class="cc-detail"><a href="${esc(url)}" target="_blank" style="color:#2563eb;">${esc(domain)}</a></div></div>`);
+      });
     }
     if (ev.case_studies && ev.case_studies.length > 0) {
-      const studies = ev.case_studies.map(cs => {
-        const tags = (cs.tags || []).map(t => `<span class="config-tag">${esc(t)}</span>`).join(' ');
-        return `<div class="config-card"><div class="cc-title">${esc(cs.title || 'Untitled')}</div>${cs.outcome ? `<div class="cc-detail">${esc(cs.outcome)}</div>` : ''}${tags ? `<div style="margin-top:4px">${tags}</div>` : ''}</div>`;
-      }).join('');
-      items.push(`<div style="margin-bottom:6px"><span class="cc-label">Case Studies (${ev.case_studies.length})</span><div class="config-grid ${pb}" style="margin-top:6px">${studies}</div></div>`);
+      ev.case_studies.forEach(cs => {
+        const tags = (cs.tags || cs.skills || []).map(t => `<span class="config-tag">${esc(t)}</span>`).join(' ');
+        cards.push(`<div class="config-card"><div class="cc-title">${esc(cs.title || cs.name || 'Untitled')}</div>${cs.outcome ? `<div class="cc-detail">${esc(cs.outcome)}</div>` : ''}${tags ? `<div style="margin-top:4px">${tags}</div>` : ''}</div>`);
+      });
+    }
+    if (ev.additional_context) {
+      cards.push(`<div class="config-card"><div class="cc-title">Background</div><div class="cc-detail">${esc(ev.additional_context.trim())}</div></div>`);
     }
     const complete = ev.evidence_complete === true ? ' <span style="font-size:0.72rem;color:#16a34a;">✓ complete</span>' : ev.evidence_complete === false ? ' <span style="font-size:0.72rem;color:#d97706;">incomplete — add more with /tweak</span>' : '';
-    const count = (ev.case_studies || []).length + (ev.portfolio_urls || []).length + (ev.resume_url ? 1 : 0);
-    html += `<div class="config-section"><details><summary><h3>Career Evidence${complete}</h3><span class="config-summary">${count} item${count === 1 ? '' : 's'}</span></summary><div class="${pb}">`;
-    html += items.join('');
+    html += `<div class="config-section"><details><summary><h3>Career Evidence${complete}</h3><span class="config-summary">${cards.length} item${cards.length === 1 ? '' : 's'}</span></summary><div class="${pb}">`;
+    html += `<div class="config-grid ${pb}">${cards.join('')}</div>`;
     html += '</div></details></div>';
   }
 

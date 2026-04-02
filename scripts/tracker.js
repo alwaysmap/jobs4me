@@ -347,11 +347,11 @@ function validateProfile(doc) {
   }
   if (doc.evidence?.case_studies) {
     doc.evidence.case_studies.forEach((cs, i) => {
-      if (!cs.name) errors.push(`evidence.case_studies[${i}]: missing name`);
+      if (!cs.title) errors.push(`evidence.case_studies[${i}]: missing title`);
       if (!cs.situation) errors.push(`evidence.case_studies[${i}]: missing situation`);
       if (!cs.action) errors.push(`evidence.case_studies[${i}]: missing action`);
       if (!cs.outcome) errors.push(`evidence.case_studies[${i}]: missing outcome`);
-      if (!Array.isArray(cs.skills)) errors.push(`evidence.case_studies[${i}]: skills must be an array`);
+      if (!Array.isArray(cs.tags)) errors.push(`evidence.case_studies[${i}]: tags must be an array`);
     });
   }
   if (errors.length > 0) throw new Error('Profile validation failed:\n  ' + errors.join('\n  '));
@@ -1007,14 +1007,14 @@ const commands = {
             portfolio_urls: ['URL string'],
             additional_context: 'block text',
             case_studies: [{
-              name: 'string (REQUIRED)',
+              title: 'string (REQUIRED)',
               company: 'string',
               date: 'YYYY-MM',
               url: 'URL string',
               situation: 'string (REQUIRED)',
               action: 'string (REQUIRED)',
               outcome: 'string (REQUIRED)',
-              skills: ['string (REQUIRED)'],
+              tags: ['string (REQUIRED)'],
             }],
             evidence_complete: 'boolean',
           },
