@@ -262,6 +262,7 @@ function writeTracker(dir, doc) {
   backup(dir, 'tracker.yaml');
   fs.writeFileSync(trackerPath(dir), yaml.dump(doc, YAML_DUMP_OPTIONS), 'utf8');
   validateDoc(doc);
+  pruneBackups(dir, 'tracker.yaml');
 }
 
 function readProfile(dir) {
@@ -274,6 +275,7 @@ function writeProfile(dir, doc) {
   backup(dir, 'profile.yaml');
   validateProfile(doc);
   fs.writeFileSync(profilePath(dir), yaml.dump(doc, YAML_DUMP_OPTIONS), 'utf8');
+  pruneBackups(dir, 'profile.yaml');
 }
 
 function readArchetypes(dir) {
@@ -298,6 +300,7 @@ function writeArchetypes(dir, doc) {
   backup(dir, 'archetypes.yaml');
   validateArchetypes(doc);
   fs.writeFileSync(archetypesPath(dir), yaml.dump(doc, YAML_DUMP_OPTIONS), 'utf8');
+  pruneBackups(dir, 'archetypes.yaml');
 }
 
 /** Read filters.yaml with key normalization to canonical names. */
@@ -322,6 +325,7 @@ function writeFilters(dir, doc) {
   backup(dir, 'filters.yaml');
   validateFilters(doc);
   fs.writeFileSync(filtersPath(dir), yaml.dump(doc, YAML_DUMP_OPTIONS), 'utf8');
+  pruneBackups(dir, 'filters.yaml');
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -414,17 +418,24 @@ function backup(dir, filename) {
   const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
   const { name, ext } = path.parse(filename);
   fs.copyFileSync(src, path.join(bDir, `${name}.${ts}${ext}`));
+}
 
-  // Prune to last 20 backups
-  const prefix = `${name}.`;
-  const backups = fs.readdirSync(bDir)
-    .filter(f => f.startsWith(prefix) && f.endsWith(ext))
-    .sort();
+function pruneBackups(dir, filename) {
+  try {
+    const bDir = backupsDir(dir);
+    if (!fs.existsSync(bDir)) return;
 
-  const toRemove = backups.slice(0, Math.max(0, backups.length - 20));
-  for (const f of toRemove) {
-    fs.unlinkSync(path.join(bDir, f));
-  }
+    const { name, ext } = path.parse(filename);
+    const prefix = `${name}.`;
+    const backups = fs.readdirSync(bDir)
+      .filter(f => f.startsWith(prefix) && f.endsWith(ext))
+      .sort();
+
+    const toRemove = backups.slice(0, Math.max(0, backups.length - 20));
+    for (const f of toRemove) {
+      try { fs.unlinkSync(path.join(bDir, f)); } catch {}
+    }
+  } catch {}
 }
 
 // ────────────────────────────────────────────────────────────────
