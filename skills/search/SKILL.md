@@ -9,7 +9,7 @@ description: >
 user_summary: >
   Search job boards for new roles that match your profile. Filters out
   duplicates and known bad fits automatically, then suggests the best matches.
-version: 0.1.0
+version: 0.2.0
 ---
 
 # Job Search Agent
@@ -72,12 +72,81 @@ For each role type, search the web for matching roles:
 - General job boards with role type keywords + location
 - **If `industries` is set**: append industry terms to job board queries as context keywords (e.g., "Technical Program Manager" + "water utilities"). This surfaces roles at companies in preferred sectors that might otherwise be missed by title-only searches.
 
+---
+
+#### Career page search strategy — JS-rendered boards
+
+**Critical:** Most company career pages (Greenhouse, Ashby, Workday, custom React SPAs) return only a JavaScript skeleton when fetched with WebFetch — job listings are rendered client-side and invisible to a plain HTTP fetch. Use the tiered approach below:
+
+| Tier | Method | How | When to use |
+|------|--------|-----|-------------|
+| 1 | **Chrome MCP** | `tabs_context_mcp` → `navigate` to career URL → `javascript_tool` to extract `document.body.innerText` | Best: live, fully rendered. Use whenever Chrome is connected. |
+| 2 | **Google `site:` search** | `site:job-boards.greenhouse.io/SLUG "director" remote` | Chrome not available. Google indexes rendered pages — most reliable non-browser fallback. |
+| 3 | **Aggregator mirror** | Search `builtin.com`, `himalayas.app`, or `remotive.com` | Secondary confirmation only. Flag staleness risk in brief. |
+| 4 | **Direct WebFetch** | Fetch the URL directly | Static sites, Lever pages, and some custom career pages. |
+
+**Check Chrome MCP availability at the start of every sweep:**
+
+```
+Call tabs_context_mcp (no arguments):
+  → Returns tab list: Chrome is ready — use Tier 1 for all JS-rendered career pages
+  → Returns error / "not connected": Chrome is unavailable — use Tier 2 (Google site:)
+```
+
+Never silently return 0 results from a JS-rendered career page. If a direct fetch yields only a JS skeleton (page body is < 500 chars, or contains only `<script>` tags and no visible text), immediately escalate to the next tier and note the fallback used in the search brief.
+
+**Chrome MCP extraction pattern:**
+
+```javascript
+// After navigate() to career page URL:
+const lines = document.body.innerText.split('\n').map(l => l.trim()).filter(l => l.length > 2);
+const relevant = lines.filter(l => /director|head of|VP |vice president|senior director|principal/i.test(l));
+JSON.stringify({ total_lines: lines.length, relevant_count: relevant.length, relevant: relevant.slice(0, 30) });
+```
+
+If the page has a department/category filter UI (Ashby, some Greenhouse pages), check if `relevant` is empty before assuming no matches — the listing may be paginated or filtered. Try navigating to a department-specific URL or look for a "View all" element.
+
+**Platform-to-URL patterns for Tier 2 Google `site:` searches:**
+
+| Platform | Career URL pattern | Google `site:` query |
+|----------|--------------------|----------------------|
+| Greenhouse | `job-boards.greenhouse.io/{slug}` | `site:job-boards.greenhouse.io/{slug} "director"` |
+| Ashby | `jobs.ashbyhq.com/{Company}` | `site:jobs.ashbyhq.com/{Company} "director"` |
+| Lever | `jobs.lever.co/{company}` | `site:jobs.lever.co/{company} "director"` |
+| Workday | `{company}.wd1.myworkdayjobs.com` | `site:{company}.wd1.myworkdayjobs.com "director"` |
+| Custom SPA | `company.com/careers` | `site:company.com/careers "director" "remote"` |
+
+Greenhouse slugs are typically lowercase (`gitlab`, not `GitLab`). Ashby slugs often match the company name's casing exactly.
+
+**When a career page URL returns 404 or fails to load:**
+
+1. Try alternate slug casing and alternate ATS platforms before giving up:
+   - `jobs.ashbyhq.com/{Company}` 404 → try `jobs.ashbyhq.com/{company}` (lowercase), then Google: `"{company}" careers jobs`
+   - `job-boards.greenhouse.io/{slug}` 404 → company may have switched ATS; search `site:jobs.lever.co/{slug}` or `site:jobs.ashbyhq.com/{company}`
+   - Custom career page fails → try appending `/open-roles`, `/join-us`, `/jobs`
+
+2. If a working URL is found, update filters.yaml via `set-filters` (read current state first, patch the affected source, write back):
+   ```bash
+   # Read current sources
+   node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js get-filters
+   
+   # Write back with corrected URL (replace entire sources array)
+   node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js set-filters --json '{"sources": [<updated array>]}'
+   ```
+
+3. If no working URL is found after retries, note the dead source in the search brief with a suggested action for the user (e.g., "Hinge Health careers URL returned 404 — run `/tweak` to update or remove this source").
+
+> **Note for plugin maintainers:** `update-filter-list` does not support `sources` — only company lists. A dedicated `update-source --name <name> --url <url>` command would make this cleaner. See the plugin improvement notes.
+
+---
+
 **Update the user after each source or batch of sources:**
 > "Searching LinkedIn for [role type]... found 12 candidates."
-> "Checking [Company] careers page... 2 new postings."
+> "Checking [Company] careers page via Chrome... 2 new postings."
+> "Chrome not connected — using Google site: search for Greenhouse pages."
 > "Wellfound returned an error — skipping for now."
 
-Track source status as you go: results found, nothing found, or errored.
+Track source status as you go: results found, nothing found, errored, or fallback-used.
 
 Collect all raw candidates as JSON: `[{"company":"...","role":"...","url":"...","description":"...","source":"..."}]`
 
@@ -96,8 +165,18 @@ node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js filter-candidates --json '<candida
 
 This is the longest phase. Use parallelism to make it faster and stream results to keep the user engaged.
 
-**Step A — Batch web fetches:** Fetch all candidate URLs concurrently in batches of 5.
-> "Fetching full postings... {done}/{total}"
+**Step A — Extract full JD content** (tiered per candidate URL):
+
+For each candidate URL, try in order until usable content is retrieved:
+
+1. **Direct WebFetch** — always try first (fast, no dependencies; works for Lever, plain HTML career pages, and some custom sites)
+2. **Chrome MCP** — if direct fetch returns a JS skeleton (< 500 chars body text or no visible role content): `navigate` to the URL, then extract `document.body.innerText` via `javascript_tool`
+3. **Aggregator mirror** — if Chrome is also unavailable: search `site:builtin.com "{role title} {company}"` or `himalayas.app/{company}`. Note "content sourced from aggregator — verify posting is still live" in the candidate record.
+4. **Google snippet** — last resort: use the Google search result snippet as an abbreviated JD. Note "limited JD content — snippet only" in the assessment.
+
+Batch all direct-fetch attempts concurrently in groups of 5. Handle failures individually with Chrome or aggregator.
+
+> "Fetching full postings... {done}/{total} ({n} via Chrome, {m} via aggregator)"
 
 **Step B — Parallel fit assessments:** Launch 3-5 **Sonnet** sub-agents in parallel. Each sub-agent receives:
 - The user's profile data (from `profile.yaml` and `archetypes.yaml`)
@@ -155,7 +234,7 @@ node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js build-board
 
 1. Create the directory if needed: `mkdir -p briefs/`
 2. Write the brief to `briefs/{YYYY-MM-DD}.md` (see `references/brief-format.md` for the template)
-3. Include: summary, new suggestions, companies to watch, near misses, source status table, market observations
+3. Include: summary, new suggestions, companies to watch, near misses, source status table (include fallback method used for each JS-rendered source), market observations
 
 The brief is the user's record of what happened in each search. It's viewable on the board via the Briefs menu.
 
@@ -216,7 +295,7 @@ Read `references/decline-learning.md` for the full process. After each decline o
 |------|-------|-----|
 | Fit assessment (per batch) | **Sonnet** | Structured rubric — fast, accurate |
 | Company overview research | **Sonnet** | Web search + structured summary |
-| JD extraction from URL | **Haiku** | Simple content extraction |
+| JD extraction from URL | **Haiku** | Simple content extraction (promote to Sonnet if aggregator/snippet fallback was needed) |
 | Interview prep generation | **Opus** | Deep experience mapping |
 | Cover letter writing | **Opus** | Voice-sensitive writing |
 | Decline pattern analysis | **Sonnet** | Pattern matching |
