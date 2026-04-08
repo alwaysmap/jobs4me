@@ -19,7 +19,9 @@ First, [install the Claude desktop app](https://claude.ai/download) if you haven
 4. Go back to **Plugins > Personal**, find **Jfm**, and click **+** to enable it
 5. Start a new Cowork session and select a folder for your job search data
 
-This method auto-updates — you'll always get the latest version without re-downloading. See [Managing plugins](https://docs.anthropic.com/en/docs/claude-ai/plugins#managing-plugins) in the Claude docs for more details.
+See [Managing plugins](https://docs.anthropic.com/en/docs/claude-ai/plugins#managing-plugins) in the Claude docs for more details.
+
+> **Desktop and CLI are separate installs.** If you also use Claude Code, you need to install the plugin there independently — updating one does not update the other.
 
 ## Claude Code Installation
 
@@ -85,7 +87,17 @@ This serves the board over HTTPS on your tailnet, accessible from any device. Th
 
 ### Desktop App
 
-Updates happen automatically. Just start a new Cowork session to pick up the latest version (old sessions cache the previous version).
+The Desktop app syncs the plugin from GitHub by git commit. To check for updates:
+
+1. Go to **Customize > Plugins > Personal**
+2. Click the **...** menu next to `jobs4me`
+3. Click **Check for updates**
+
+If the version doesn't update after checking, remove the marketplace and re-add it:
+
+1. Click **...** > **Remove**
+2. Click **+** > **Add marketplace** and paste `alwaysmap/jobs4me` again
+3. Re-enable the plugin
 
 ### Claude Code
 
@@ -98,5 +110,9 @@ claude plugin update jfm@jobs4me
 ```
 
 Restart Claude Code to apply the update.
+
+### Important
+
+Desktop and CLI plugin installs are **independent** — updating via the CLI does not update the Desktop app, and vice versa. If you use both, update each one separately.
 
 Your data folder is untouched by plugin updates — only the plugin code changes.
