@@ -812,6 +812,36 @@ const commands = {
     return { added: args.pattern, total: doc.decline_patterns.length };
   },
 
+  'update-source'(dir, args) {
+    if (!args.name) throw new Error('--name is required');
+    if (!args.url && !args.type) throw new Error('Provide --url and/or --type to update');
+
+    const doc = readFilters(dir);
+    if (!doc.sources) doc.sources = [];
+
+    const idx = doc.sources.findIndex(
+      s => s.name.toLowerCase() === args.name.toLowerCase()
+    );
+
+    if (idx === -1) {
+      if (args['add-if-missing']) {
+        if (!args.url) throw new Error('--url is required when adding a new source');
+        const type = args.type || 'career_page';
+        doc.sources.push({ name: args.name, url: args.url, type });
+        writeFilters(dir, doc);
+        return { action: 'added', name: args.name, url: args.url, type };
+      }
+      throw new Error(`Source not found: "${args.name}". Use --add-if-missing to create it.`);
+    }
+
+    const source = doc.sources[idx];
+    const before = { ...source };
+    if (args.url) source.url = args.url;
+    if (args.type) source.type = args.type;
+    writeFilters(dir, doc);
+    return { action: 'updated', name: source.name, before, after: { ...source } };
+  },
+
   // ── Batch & bulk ──
 
   batch(dir, args) {
@@ -1191,7 +1221,7 @@ const commands = {
       commands: {
         'Core CRUD':    ['list', 'get', 'add', 'update', 'decline', 'stage'],
         'Batch':        ['batch', 'batch-decline', 'filter-candidates'],
-        'Config':       ['get-profile', 'set-profile', 'get-archetypes', 'set-archetypes', 'get-filters', 'set-filters', 'update-filter-list'],
+        'Config':       ['get-profile', 'set-profile', 'get-archetypes', 'set-archetypes', 'get-filters', 'set-filters', 'update-filter-list', 'update-source'],
         'Files':        ['save-jd', 'migrate', 'paths', 'needs-research'],
         'Board':        ['board-json', 'build-board', 'list-briefs'],
         'Query':        ['count', 'find'],
@@ -1206,7 +1236,7 @@ const commands = {
 // Commands that mutate data files and trigger auto board rebuild
 const MUTATING_COMMANDS = new Set([
   'add', 'update', 'decline', 'stage',
-  'batch', 'batch-decline', 'add-decline-pattern',
+  'batch', 'batch-decline', 'add-decline-pattern', 'update-source',
   'set-profile', 'set-archetypes', 'set-filters', 'update-filter-list',
 ]);
 
@@ -1228,6 +1258,7 @@ const REQUIRED_ARGS = {
   'set-archetypes':      ['json'],
   'set-filters':         ['json'],
   'update-filter-list':  ['list'],
+  'update-source':       ['name'],
 };
 
 // ────────────────────────────────────────────────────────────────
