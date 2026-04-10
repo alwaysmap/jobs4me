@@ -26,6 +26,7 @@ When the user asks for help, read the `user_summary` field from each skill's SKI
 > **Managing your pipeline:**
 > - `/review` — Walk through new suggestions and decide on each one.
 > - `/update` — Move a single role through stages (applied, interviewing, declined, etc.)
+> - `/followup` — Get recommended next actions for your Applied roles, or draft outreach for a specific one.
 > - `/board` — Regenerate your kanban board (usually automatic — just refresh the page).
 >
 > **Preparing:**
@@ -42,6 +43,7 @@ When the user asks for help, read the `user_summary` field from each skill's SKI
 If the user has an existing profile (check for `profile.yaml`), tailor the response to their current state:
 
 - If they have suggestions waiting, mention `/review`
+- If they have 3+ roles in `applied`, mention `/followup` — it'll tell them which ones need attention and which are in pure-wait territory
 - If they have roles in `applied` or `interviewing`, mention `/prep`
 - If they haven't run a search yet, nudge toward `/search`
 - If their `evidence_complete` is false, mention `/tweak` to add career evidence

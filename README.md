@@ -30,6 +30,7 @@ After setup, the first `/search` run takes around **20 minutes** — it's checki
 | `/search` | Run a search sweep right now |
 | `/assess <url>` | Assess a specific job posting against your profile |
 | `/update <company> - <status>` | Move a role through stages — interested, applied, interviewing, decline, etc. |
+| `/followup` | Recommend next actions for your Applied roles, or draft outreach for a specific one |
 | `/prep <company>` | Generate interview prep for a company |
 | `/board` | Regenerate and view your kanban board |
 | `/tweak` | Adjust anything — companies, sources, role types, evidence, preferences |
