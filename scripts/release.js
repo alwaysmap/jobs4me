@@ -6,10 +6,15 @@
  *
  * This will:
  * 1. Update version in plugin.json and package.json
- * 2. Commit the version bump
+ * 2. Commit the version bump on the current branch
  * 3. Create git tag v0.6.0
- * 4. Push the commit and tag to origin
+ * 4. Push HEAD to origin/main and push the tag
  * 5. GitHub Actions builds the zip and creates the release
+ *
+ * Worktree-safe: the push uses HEAD:main rather than the local main ref,
+ * so releases can be made from a worktree branch without needing to have
+ * main checked out in the same working directory. Git's non-fast-forward
+ * protection still rejects the push if HEAD has diverged from origin/main.
  */
 
 import fs from 'node:fs';
@@ -77,6 +82,6 @@ const run = (cmd) => execSync(cmd, { cwd: root, stdio: 'inherit' });
 run('git add .claude-plugin/plugin.json .claude-plugin/marketplace.json package.json');
 run(`git commit -m "Release ${tag}"`);
 run(`git tag ${tag}`);
-run(`git push origin main ${tag}`);
+run(`git push origin HEAD:main ${tag}`);
 
 console.log(`\nReleased ${tag} — GitHub Actions will build and publish the zip.`);
