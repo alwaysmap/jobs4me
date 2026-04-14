@@ -18,7 +18,7 @@ Autonomous job search, fit assessment, and learning loop for a configured job se
 
 ## Shell Setup
 
-The tracker script auto-detects the workspace directory and auto-installs npm dependencies on first run. Set `JFM_DIR` only if the workspace path contains special shell characters (`!`, `$`, spaces):
+Always `export JFM_DIR='<workspace path>'` (single quotes) before running any tracker command. The script refuses to operate on a phantom workspace, so setting this up front avoids silent writes to the wrong directory when the path contains spaces or special shell characters. Dependencies are vendored — no `npm install` needed.
 
 ```bash
 export JFM_DIR='<workspace path>'

@@ -252,7 +252,7 @@ This phase is shared by both paths. After setup is complete:
 >
 > You can start the search now and do something else while it runs, or come back later and run `/search` when you're ready.
 
-If yes, initialize the tracker (the script auto-installs dependencies on first run):
+If yes, initialize the tracker (dependencies are vendored with the plugin — no install step needed):
 
 ```bash
 node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js init

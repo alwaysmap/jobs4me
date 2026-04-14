@@ -74,7 +74,7 @@ const includes = [
   'scripts/tracker.js',
   'scripts/package.json',
   'scripts/package-lock.json',
-  'scripts/node_modules/js-yaml/',
+  'scripts/vendor/',
   'skills/',
   'README.md',
   'LICENSE',

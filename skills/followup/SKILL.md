@@ -19,7 +19,7 @@ user_summary: >
 
 # Follow Up on Applied Roles
 
-**Shell setup:** The tracker script auto-detects the workspace directory. Set `JFM_DIR` only if the path contains special characters.
+**Shell setup:** Always `export JFM_DIR='<workspace path>'` (single quotes) before running tracker commands. The script refuses to operate if it can't resolve a real workspace.
 
 **Read `search/references/routing.md` before processing any user message** — it defines how to decompose compound messages and where to route each type of input.
 

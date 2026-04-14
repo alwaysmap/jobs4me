@@ -15,10 +15,15 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// Resolve the script's real directory (survives symlinks and copies). This is
+// the anchor for locating vendored deps and the plugin root fallback.
+const __filename = fileURLToPath(import.meta.url);
+const __realfile  = fs.realpathSync(__filename);
+const __dirname   = path.dirname(__realfile);
 
-// js-yaml is bundled in the zip — no npm install needed
-import yaml from 'js-yaml';
+// js-yaml is vendored as a self-contained ESM bundle under ./vendor so the
+// plugin works when installed from git (no npm install, no node_modules).
+import yaml from './vendor/js-yaml.mjs';
 
 // ────────────────────────────────────────────────────────────────
 // Constants
@@ -683,7 +688,9 @@ function migrateFiles(dir, apps) {
  * @param {{ skipMigration?: boolean }} [options]
  */
 function buildBoard(dir, options = {}) {
-  // Resolve template path: CLAUDE_PLUGIN_ROOT (set by Cowork) or relative to script
+  // Resolve template path: CLAUDE_PLUGIN_ROOT (set by Cowork) or relative to the
+  // real script location. Using __dirname (resolved via realpathSync above) keeps
+  // the fallback correct across symlinks and copies.
   const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT || path.join(__dirname, '..');
   const templatePath = path.join(pluginRoot, 'skills', 'board', 'references', 'board-template.html');
   if (!fs.existsSync(templatePath)) throw new Error(`Template not found: ${templatePath}`);
@@ -1265,7 +1272,7 @@ const REQUIRED_ARGS = {
 // Main
 // ────────────────────────────────────────────────────────────────
 
-/** Walk up from cwd looking for tracker.yaml or profile.yaml. */
+/** Walk up from cwd looking for tracker.yaml or profile.yaml. Returns null if not found. */
 function detectWorkspace() {
   let dir = process.cwd();
   const root = path.parse(dir).root;
@@ -1276,19 +1283,40 @@ function detectWorkspace() {
     }
     dir = path.dirname(dir);
   }
-  return process.cwd();
+  return null;
 }
 
 function main() {
   const args = parseArgs(process.argv);
-  const dir = args.dir || process.env.JFM_DIR || detectWorkspace();
   const cmd = args._command;
+  const explicitDir = args.dir || process.env.JFM_DIR;
+  const detected = explicitDir || detectWorkspace();
+  // `init` is allowed to create a fresh workspace in cwd when nothing is detected.
+  const dir = detected || (cmd === 'init' ? process.cwd() : null);
+
+  if (!dir) {
+    console.error('Error: could not locate a JFM workspace (no tracker.yaml or profile.yaml found walking up from cwd).');
+    console.error('Set JFM_DIR to the workspace path, or pass --dir=<path>.');
+    console.error("  export JFM_DIR='/path/to/workspace'");
+    process.exit(1);
+  }
+
+  // Guard against silent writes to a stale/wrong workspace: if neither tracker.yaml
+  // nor profile.yaml exists at the resolved dir, fail loudly (except for `init`).
+  if (cmd !== 'init' &&
+      !fs.existsSync(path.join(dir, 'tracker.yaml')) &&
+      !fs.existsSync(path.join(dir, 'profile.yaml'))) {
+    console.error(`Error: no tracker.yaml or profile.yaml at ${dir}`);
+    console.error('Refusing to operate on a phantom workspace. Check JFM_DIR / --dir, or run `init` to create one.');
+    process.exit(1);
+  }
 
   const handler = cmd ? commands[cmd] : null;
   if (!handler) {
     console.error(cmd ? `Unknown command: ${cmd}` : 'No command specified');
     console.error('Run: node tracker.js help');
     process.exit(1);
+
   }
 
   const required = REQUIRED_ARGS[cmd] || [];

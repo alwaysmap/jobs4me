@@ -6,7 +6,7 @@
 
 Location: `${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js`
 
-Run via Bash. The script auto-detects the workspace by walking up from the current directory looking for `tracker.yaml` or `profile.yaml`. It also auto-installs npm dependencies on first run.
+Run via Bash. The script auto-detects the workspace by walking up from the current directory looking for `tracker.yaml` or `profile.yaml`, and refuses to operate if it can't find one. Dependencies (`js-yaml`) are vendored under `scripts/vendor/` — no `npm install` needed.
 
 The workspace directory can be set explicitly if needed (in priority order):
 
@@ -14,17 +14,14 @@ The workspace directory can be set explicitly if needed (in priority order):
 2. **`JFM_DIR` environment variable** — set once, all commands pick it up
 3. **Auto-detection** — walks up from cwd looking for `tracker.yaml` or `profile.yaml`
 
-**Use `JFM_DIR` only when the workspace path contains special shell characters** (`!`, `$`, `#`, spaces, etc.):
+**Always set `JFM_DIR`** before running tracker commands. Auto-detection silently fails when cwd is outside the workspace, and the script will refuse to operate on a phantom workspace — setting `JFM_DIR` once up front is the reliable path:
 
 ```bash
-export JFM_DIR='/path/to/My Project!'
-```
-
-For most cases, just run commands directly — no `--dir` needed:
-
-```bash
+export JFM_DIR='/path/to/workspace'
 node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js <command> [options]
 ```
+
+Single quotes matter when the path contains spaces or special characters (`!`, `$`, `#`).
 
 **Board auto-rebuild:** All mutating commands automatically rebuild `Kanban/index.html` after every change. Pass `--no-board` to skip this during batch operations where you want one rebuild at the end.
 
