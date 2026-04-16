@@ -66,7 +66,7 @@ Don't just note it and move on. Career evidence makes fit assessments and cover 
 
 Always fetch the URL. Determine what it is:
 
-- **Job posting** → Route to `/assess` behavior
+- **Job posting** → Route to the assess skill's behavior
 - **Company careers page** → Offer to add as a source in `filters.yaml`
 - **Blog post / portfolio / talk by the user** → Extract key points, add to `profile.yaml` evidence
 - **Company info page** → Extract industry/product context, consider for watch list or industry interests
@@ -74,4 +74,4 @@ Always fetch the URL. Determine what it is:
 
 ## Skill Priority in Compound Messages
 
-When a compound message spans multiple skills (e.g., `/update` + `/tweak`), handle the pipeline action first (decline, stage change), then handle configuration changes inline using `/tweak` behavior. You don't need to formally invoke `/tweak` — just apply the same routing logic: identify the YAML file, make the change via `tracker.js`, confirm each change.
+When a compound message spans multiple skills (e.g., update + tweak), handle the pipeline action first (decline, stage change), then handle configuration changes inline using the tweak skill's behavior. You don't need to formally invoke the tweak skill — just apply the same routing logic: identify the YAML file, make the change via `tracker.js`, confirm each change.

@@ -108,7 +108,7 @@ decline_patterns:                      # top-level array of objects
 - Sources are at the TOP LEVEL: `sources:`, not `include.sources:`
 - Skip list is `skip_companies:`, not `skip:`
 - `industries` captures positive sector/domain interests (e.g., "water utilities", "industrial data", "civic tech"). Used by the search agent to weight companies in these sectors more favorably. Managed via `update-filter-list --list industries --add/--remove`.
-- `decline_patterns` are learned automatically from `/update Company - decline reason`
+- `decline_patterns` are learned automatically from `/jfm:update Company - decline reason`
 - Source `type` determines search behavior:
   - `job_board` / `aggregator` — searched with role type keywords + location
   - `org_portfolio` / `curated_list` — scanned for employer names, then career pages checked
@@ -179,9 +179,9 @@ declined → suggested, maybe
       {YYYY-MM-DD-role-slug}/
         jd.md                         # role-specific job description
         prep.md                       # role-specific interview prep
-        cover-letter.md               # role-specific (from /apply)
-        resume.md                     # role-specific (from /apply)
-        offer-notes.md                # role-specific (from /update with offer)
+        cover-letter.md               # role-specific (from the apply skill)
+        resume.md                     # role-specific (from the apply skill)
+        offer-notes.md                # role-specific (from the update skill, offered stage)
   Kanban/
     index.html                        # auto-generated board
   .backups/                           # auto-managed by tracker.js

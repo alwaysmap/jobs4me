@@ -38,7 +38,7 @@ pages.
 
 ### 2. Launch Chrome once and confirm the connection
 
-Open Cowork and run `/search` or ask "check if Chrome is connected." JFM calls the extension
+Open Cowork and run `/jfm:search` or ask "check if Chrome is connected." JFM calls the extension
 internally — if it responds, you're ready. If not, make sure Chrome is open and the extension icon
 is visible in the toolbar.
 

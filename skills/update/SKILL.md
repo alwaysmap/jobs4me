@@ -4,9 +4,9 @@ description: >
   Use this skill when the user wants to update a role's status, move a role through
   pipeline stages, decline a role, mark something as applied or interviewing, or
   report a rejection. Triggers on "update", "applied to", "got rejected", "decline",
-  "not interested", "got an offer", "interviewing at", or any status change for a
-  tracked role. Also use when the user just says /update with no arguments to show
-  their active roles.
+  "not interested", "got an offer", "interviewing at", or any natural-language
+  status change for a tracked role. Also handles the bare `/jfm:update` command
+  (no arguments) by showing active roles for the user to pick from.
 user_summary: >
   Move a single role through your pipeline — mark it as applied, interviewing,
   offered, declined, or rejected.
@@ -21,12 +21,12 @@ user_summary: >
 Update the stage or status of a tracked role, including declining roles.
 
 Parse the user's input as: `Company Name - status` with an optional note/reason after. Examples:
-- `/update Acme - applied`
-- `/update Acme - interviewing phone screen scheduled for Thursday`
-- `/update Acme - rejected got the generic "moved forward with other candidates" email`
-- `/update Acme - closed posting removed, assume filled`
-- `/update Acme - decline too much travel`
-- `/update Acme - not interested, too enterprise-y`
+- `/jfm:update Acme - applied`
+- `/jfm:update Acme - interviewing phone screen scheduled for Thursday`
+- `/jfm:update Acme - rejected got the generic "moved forward with other candidates" email`
+- `/jfm:update Acme - closed posting removed, assume filled`
+- `/jfm:update Acme - decline too much travel`
+- `/jfm:update Acme - not interested, too enterprise-y`
 
 Valid stages: `suggested`, `maybe`, `applied`, `interviewing`, `offered`, `rejected`, `closed`, `declined`
 
@@ -77,8 +77,8 @@ Common shorthand the user might use (map these to stages):
 
 4. **Post-update actions**:
    - After every stage change or decline, use `present_files` to share `Kanban/index.html`, then tell the user: "Your board has been updated."
-   - If new stage is `applied`, suggest running `/apply` to generate a cover letter if they haven't already
-   - If new stage is `interviewing`, suggest running `/prep` for that company
+   - If new stage is `applied`, suggest running `/jfm:apply` to generate a cover letter if they haven't already
+   - If new stage is `interviewing`, suggest running `/jfm:prep` for that company
    - If new stage is `rejected` or `closed`, acknowledge briefly — don't over-sympathize, just confirm and move on
    - If new stage is `offered`, run the **offer evaluation** (see below)
 
@@ -117,13 +117,13 @@ Users often mention configuration changes while updating a role: "decline Cognit
 - **URLs** — fetch them. Blog/portfolio → evidence. Careers page → offer as source. Job posting → offer to assess.
 - **Source additions** ("add their careers page") → add to filters.yaml sources via `set-filters`
 
-Handle the pipeline action first, then address each secondary intent. Confirm each change individually. Don't silently drop any part of the user's message.
+Handle the pipeline action first, then address each secondary intent separately. Confirm each change individually. Don't silently drop any part of the user's message.
 
 See `search/references/routing.md` for the full routing decision tree.
 
 ## No arguments — show active roles
 
-If no arguments are provided (user just typed `/update`), list their active roles so they can pick one:
+If no arguments are provided (user just typed `/jfm:update`), list their active roles so they can pick one:
 
 1. Get all applications:
    ```bash
@@ -153,4 +153,4 @@ If no arguments are provided (user just typed `/update`), list their active role
    > Suggested -> **Maybe** (interested) -> **Applied** -> **Interviewing** -> **Offered**
    > Or at any point: **Decline** (pass with a reason) / **Rejected** / **Closed** (ghosted/filled)
 
-This makes `/update` feel like a dashboard interaction, not a blank prompt.
+This makes `/jfm:update` feel like a dashboard interaction, not a blank prompt.

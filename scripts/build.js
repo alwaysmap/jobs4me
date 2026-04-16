@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
- * build.js — Package the plugin into jobs-for-me.zip for Claude Work.
+ * build.js — Package the plugin into jobs-for-me.zip.
  *
  * If a git tag (v*) is checked out, syncs the version into plugin.json
  * and package.json before building. Otherwise uses whatever version is
  * already in the files.
  *
- * Usage: npm run build (from project root)
+ * Usage: npm run build
  */
 
 import fs from 'node:fs';
@@ -24,11 +24,10 @@ function getGitTagVersion() {
   try {
     const tag = execSync('git describe --tags --exact-match HEAD 2>/dev/null', { cwd: root })
       .toString().trim();
-    // Strip leading 'v' — "v0.5.2" → "0.5.2"
     if (tag.startsWith('v')) return tag.slice(1);
     return tag;
   } catch {
-    return null; // not on a tag
+    return null;
   }
 }
 
@@ -43,20 +42,11 @@ function updateJsonVersion(filePath, version) {
 }
 
 const tagVersion = getGitTagVersion();
-function updateMarketplaceVersion(filePath, version) {
-  const json = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-  if (json.plugins?.[0]) {
-    json.plugins[0].version = version;
-    fs.writeFileSync(filePath, JSON.stringify(json, null, 2) + '\n', 'utf8');
-  }
-}
 
 if (tagVersion) {
   updateJsonVersion(path.join(root, '.claude-plugin', 'plugin.json'), tagVersion);
   updateJsonVersion(path.join(root, 'package.json'), tagVersion);
-  updateMarketplaceVersion(path.join(root, '.claude-plugin', 'marketplace.json'), tagVersion);
 } else {
-  // Read current version for display
   const plugin = JSON.parse(fs.readFileSync(path.join(root, '.claude-plugin', 'plugin.json'), 'utf8'));
   console.log(`No git tag on HEAD — using version ${plugin.version} from plugin.json`);
 }
@@ -70,7 +60,6 @@ if (fs.existsSync(outFile)) {
 
 const includes = [
   '.claude-plugin/plugin.json',
-  '.claude-plugin/marketplace.json',
   'scripts/tracker.js',
   'scripts/package.json',
   'scripts/package-lock.json',
@@ -87,7 +76,9 @@ try {
   execSync(cmd, { stdio: 'inherit' });
   const stats = fs.statSync(outFile);
   const kb = (stats.size / 1024).toFixed(1);
-  const version = tagVersion || JSON.parse(fs.readFileSync(path.join(root, '.claude-plugin', 'plugin.json'), 'utf8')).version;
+  const version = tagVersion || JSON.parse(
+    fs.readFileSync(path.join(root, '.claude-plugin', 'plugin.json'), 'utf8')
+  ).version;
   console.log(`\nBuilt: jobs-for-me.zip v${version} (${kb} KB)`);
 } catch (err) {
   console.error('Build failed:', err.message);

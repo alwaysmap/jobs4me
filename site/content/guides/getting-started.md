@@ -6,12 +6,12 @@ weight: 2
 
 ## Setup
 
-Type `/setup` in your Cowork session. You'll be offered two paths:
+Type `/jfm:setup` in your Cowork session. You'll be offered two paths:
 
 - **Full setup** (~10 minutes) — a conversational interview covering your background, preferences, role types, target companies, and search sources
 - **Quick start** (~3 minutes) — just share your resume and describe the kinds of roles you want
 
-Either way, the agent will show you where you are at every step ("Step 2 of 5: Career evidence") and everything is adjustable later with `/tweak`.
+Either way, the agent will show you where you are at every step ("Step 2 of 5: Career evidence") and everything is adjustable later with `/jfm:tweak`.
 
 ### What gets created
 

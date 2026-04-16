@@ -4,9 +4,9 @@ description: >
   Use this skill when the user wants to adjust, change, or update their job search
   configuration — profile preferences, role types, sources, target companies, skip lists,
   career evidence, or compensation settings. Triggers on "tweak", "change my settings",
-  "add a company", "update my sources", "adjust my filters", "add evidence", or any
-  request to modify profile.yaml, archetypes.yaml, or filters.yaml. Also use when the
-  user says things like "keep an eye on Stripe" or "stop searching for sales roles".
+  "add a company", "update my sources", "adjust my filters", "add evidence", or natural
+  asides like "keep an eye on Stripe" or "stop searching for sales roles". Also handles
+  the `/jfm:tweak` command.
 user_summary: >
   Adjust your search settings — add target companies, change role types,
   update filters, or tweak compensation and travel preferences.
@@ -20,7 +20,7 @@ Help the user make targeted changes to their setup without re-running the full o
 
 ## Start
 
-Read the user's message to figure out what they want to change. If they just said `/tweak` with no specifics, show them what's adjustable:
+Read the user's message to figure out what they want to change. If they just said `/jfm:tweak` with no specifics, show them what's adjustable:
 
 > What would you like to adjust? Here are the things I can help with:
 >

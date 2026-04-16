@@ -1,6 +1,6 @@
 # Example Mode 2 outreach file
 
-This is a synthetic target for what `{role_dir}/outreach.md` should look like after `/followup {company}` finishes drafting. The role below is made up — an Affirm-style fintech Sr. Director Technical Programs position that has a mission-alignment line in the JD. Use this as a structural anchor when writing real outreach files.
+This is a synthetic target for what `{role_dir}/outreach.md` should look like after `/jfm:followup {company}` finishes drafting. The role below is made up — an Affirm-style fintech Sr. Director Technical Programs position that has a mission-alignment line in the JD. Use this as a structural anchor when writing real outreach files.
 
 ---
 

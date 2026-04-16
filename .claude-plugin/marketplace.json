@@ -1,14 +1,12 @@
 {
-  "name": "jobs4me",
-  "owner": {
-    "name": "Dylan Thomas"
-  },
+  "name": "jfm",
   "plugins": [
     {
       "name": "jfm",
+      "displayName": "Jobs for Me",
       "source": "./",
       "description": "An AI-powered job search agent that learns what roles you'd actually take, finds them, assesses fit, and prepares you for interviews",
-      "version": "0.7.1",
+      "version": "0.8.0",
       "author": {
         "name": "Dylan Thomas"
       },

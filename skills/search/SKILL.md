@@ -2,10 +2,10 @@
 name: search
 description: >
   Use this skill when the user wants to "search for jobs", "find new roles",
-  "run a search sweep", "look for open positions", "check job boards",
-  or when a scheduled search task runs. Also use when assessing whether
-  a specific role is a good fit, or when updating decline patterns
-  after the user rejects suggestions.
+  "run a search sweep", "look for open positions", or "check job boards".
+  Also handles the `/jfm:search` command and runs from scheduled search tasks.
+  Use when assessing whether a specific role is a good fit, or when updating
+  decline patterns after the user rejects suggestions.
 user_summary: >
   Search job boards for new roles that match your profile. Filters out
   duplicates and known bad fits automatically, then suggests the best matches.
@@ -134,9 +134,9 @@ Greenhouse slugs are typically lowercase (`gitlab`, not `GitLab`). Ashby slugs o
    node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js set-filters --json '{"sources": [<updated array>]}'
    ```
 
-3. If no working URL is found after retries, note the dead source in the search brief with a suggested action for the user (e.g., "Hinge Health careers URL returned 404 — run `/tweak` to update or remove this source").
+3. If no working URL is found after retries, note the dead source in the search brief with a suggested action for the user (e.g., "Hinge Health careers URL returned 404 — run `/jfm:tweak` to update or remove this source").
 
-> **Note for plugin maintainers:** `update-filter-list` does not support `sources` — only company lists. A dedicated `update-source --name <name> --url <url>` command would make this cleaner. See the plugin improvement notes.
+> **Note for plugin maintainers:** `update-filter-list` does not support `sources` — only company lists. A dedicated `update-source --name <n> --url <url>` command would make this cleaner. See the plugin improvement notes.
 
 ---
 
@@ -256,7 +256,7 @@ If they say yes, trigger the review skill. If this is their first search, the re
 
 ## Fit Assessment
 
-When assessing a single role (via `/assess` or during a sweep):
+When assessing a single role (via the assess skill or during a sweep):
 
 Read `references/fit-assessment.md` for the full assessment framework. Output format:
 
@@ -268,7 +268,7 @@ Always check hard constraints first (comp floor, travel, location, seniority). I
 
 ## Decline Pattern Learning
 
-When the user declines a role (via `/update Company - decline reason` or in conversation):
+When the user declines a role (via `/jfm:update Company - decline reason` or in conversation):
 
 Read `references/decline-learning.md` for the full process. After each decline or batch:
 

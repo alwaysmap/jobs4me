@@ -1,10 +1,6 @@
 {
   "name": "jfm",
-  "version": "0.7.1",
+  "version": "0.8.0",
   "private": true,
-  "type": "module",
-  "scripts": {
-    "build": "node scripts/build.js",
-    "release": "node scripts/release.js"
-  }
+  "type": "module"
 }

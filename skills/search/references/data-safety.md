@@ -79,7 +79,7 @@ Every mutating command:
 - **To change stage**: call `stage` (simpler than update for just stage changes)
 - **To decline**: call `decline` with the id and reason
 - **To generate the board**: call `build-board` which reads YAML + markdown and writes `Kanban/index.html`
-- **To read other YAML files** (profile.yaml, archetypes.yaml): use the Read tool directly — these files are written rarely and by the /setup command
+- **To read other YAML files** (profile.yaml, archetypes.yaml): use the Read tool directly — these files are written rarely and by the setup skill
 
 ## Files Claude MAY Write Directly
 

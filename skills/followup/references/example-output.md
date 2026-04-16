@@ -1,6 +1,6 @@
 # Example Mode 1 briefing output
 
-This is a synthetic target for what `/followup` should produce when run against a board with six Applied roles spread across the five timing bands. It's not a real user's board — names and details are made up. Use it as a structural anchor when rendering the real thing.
+This is a synthetic target for what `/jfm:followup` should produce when run against a board with six Applied roles spread across the five timing bands. It's not a real user's board — names and details are made up. Use it as a structural anchor when rendering the real thing.
 
 ---
 
@@ -48,7 +48,7 @@ You're running defaults — no `follow_up_cadence` overrides in your profile. If
 No status changes have been made. If you want, I can:
 
 - **Close ActBlue and/or G-P** now if the final pings have already gone out and nothing came back. (One `stage` call each, one confirmation each.)
-- **Stamp follow-up dates into notes** so they hide from `/review stale` until the stamped date approaches. Capital One at 2026-04-20, Guild at 2026-04-28, and so on.
+- **Stamp follow-up dates into notes** so they hide from `/jfm:review stale` until the stamped date approaches. Capital One at 2026-04-20, Guild at 2026-04-28, and so on.
 - **Draft outreach for Zillow Principal TPM** right now — I'll load the JD and cover letter if they're on file and we can get a ~130-word note ready in two minutes. (Drops into single-role drafting mode.)
 - **Save a cadence tweak** if any of these bands feel wrong for your market.
 

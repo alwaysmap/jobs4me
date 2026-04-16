@@ -2,9 +2,10 @@
 name: apply
 description: >
   Use this skill when the user wants to apply for a role — "write a cover letter",
-  "help me apply", "draft my application for {company}", "tailor my resume",
-  or when a role moves to the applied stage and needs application materials.
-  Generates a cover letter and optionally a tailored resume for a specific role.
+  "help me apply", "draft my application for {company}", or "tailor my resume".
+  Also handles the `/jfm:apply` command and triggers when a role moves to the
+  applied stage and needs application materials. Generates a cover letter and
+  optionally a tailored resume for a specific role.
 user_summary: >
   Draft application materials for a role — a short, personal cover letter in
   your voice and an optionally tailored resume highlighting relevant experience.
@@ -59,10 +60,7 @@ Generate application materials — a cover letter and optionally a tailored resu
     > **Cover letter** — `{role_dir}/cover-letter.md`
     >
     > {Show the full cover letter text here}
-    >
-    > {If tailored resume was also created:}
-    > **Tailored resume** — `{role_dir}/resume.md`
-    >
+
     Use `present_files` to share the created files and `Kanban/index.html` with the user.
 
     Iterate if they give feedback — update the file and show the revised version inline.

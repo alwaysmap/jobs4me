@@ -3,12 +3,11 @@ name: review
 description: >
   Use this skill when the user wants to review, triage, or walk through their
   tracked roles in batch. Triggers on "review my board", "triage", "walk me through",
-  "what needs attention", "review suggestions", "catch me up", "what's new",
-  or any request to process multiple roles in one sitting. Also use when the user
-  says "/review" with no arguments. Supports stage filters like "/review suggested"
-  or "/review interviewing". This is the conversational alternative to running
-  /update one role at a time — decisions trigger background work (company research,
-  interview prep) via sub-agents while the triage continues.
+  "what needs attention", "review suggestions", "catch me up", or "what's new".
+  Also handles the `/jfm:review` command with optional stage filter argument
+  ("suggested", "maybe", "applied", "interviewing", "stale", "all"). This is the
+  conversational alternative to updating one role at a time — decisions trigger
+  background work (company research, interview prep) while the triage continues.
 user_summary: >
   Walk through your tracked roles together — triage new suggestions, advance
   promising ones, and decline the rest. Handles multiple roles in one sitting.
@@ -32,17 +31,17 @@ This sets the expectation that their feedback is training data, not just triage.
 
 ## Arguments
 
-`/review` accepts an optional stage filter:
+`/jfm:review` accepts an optional stage filter as its argument:
 
 | Input | What gets queued |
 |---|---|
-| `/review` | Everything that needs attention (default priority order) |
-| `/review all` | Same as no argument |
-| `/review suggested` | Only new suggestions |
-| `/review maybe` | Only roles marked as interesting |
-| `/review applied` | Only roles in applied stage |
-| `/review interviewing` | Only roles in interview stage |
-| `/review stale` | Maybes >7 days + applied >14 days (things going cold) |
+| `/jfm:review` | Everything that needs attention (default priority order) |
+| `/jfm:review all` | Same as no argument |
+| `/jfm:review suggested` | Only new suggestions |
+| `/jfm:review maybe` | Only roles marked as interesting |
+| `/jfm:review applied` | Only roles in applied stage |
+| `/jfm:review interviewing` | Only roles in interview stage |
+| `/jfm:review stale` | Maybes >7 days + applied >14 days (things going cold) |
 
 The user can also use natural language: "review what's new", "triage my suggestions", "what needs attention in applied".
 
@@ -143,7 +142,7 @@ User: "yes"
 
 User: "advance" (on a role currently in Applied)
 
-> Moved to Interviewing. Kicking off company research and interview prep in the background — I'll have docs ready by the time we're done here. **Next:**
+> Moved to Interviewing. I'll queue up company research and interview prep — run `/jfm:prep BigCo` when you're ready for a deep dive. **Next:**
 >
 > **StartupX** — Head of Engineering
 > ...
@@ -155,16 +154,16 @@ Keep the momentum. The whole point is speed.
 
 ## Follow-Up Work
 
-Some decisions trigger follow-up work (company research, interview prep). In Cowork, there are no background agents — all work happens inline. Design the review flow to **defer heavy work** and keep the triage fast.
+Some decisions trigger follow-up work (company research, interview prep). Design the review flow to **defer heavy work** and keep the triage fast.
 
 | Decision | What to do |
 |---|---|
-| Move to **Maybe** | Just move the stage. No research needed yet — the user is just expressing interest. |
+| Move to **Maybe** | Just move the stage. No research needed yet. |
 | Move to **Maybe** and JD not yet saved | Fetch the JD and save it (quick — one web fetch). Then continue the review. |
-| Move to **Interviewing** | Move the stage, then **after the review session ends**, offer to run `/prep` for that company. Don't do it inline during review. |
-| User says **"tell me more"** | Show the full `agent_summary` and any existing overview. If no overview exists, say so: "No company research yet — I can generate it after we finish the review, or you can run `/prep {company}` later." |
+| Move to **Interviewing** | Move the stage, then **after the review session ends**, offer to run `/jfm:prep` for that company. |
+| User says **"tell me more"** | Show the full `agent_summary` and any existing overview. If no overview exists, say so. |
 
-The key principle: **the review session is for decisions, not research**. Keep cards moving. Defer research to `/prep` or to the end of the session.
+The key principle: **the review session is for decisions, not research**. Defer research to `/jfm:prep` or to the end of the session.
 
 ### After the review, if companies need research
 
@@ -173,14 +172,9 @@ At the end of the review, check if any newly-advanced companies need overviews:
 node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js needs-research
 ```
 
-If there are companies needing research, offer to do it:
-> {N} companies need research (Oracle, Databricks). Want me to generate company overviews now, or would you rather do it later with `/prep`?
+If there are companies needing research, offer to do it. After each overview is written, use `present_files` to share it, then summarize.
 
-If yes, generate overviews inline with progress updates. After each overview is written, use `present_files` to share it, then summarize:
-> **Oracle — Company Overview** created
-> {2-3 line summary: what they do, market position, why this role exists}
-
-If the user moved any role to Interviewing, also offer full interview prep via `/prep`.
+If the user moved any role to Interviewing, also offer full interview prep via `/jfm:prep`.
 
 ## "Tell me more"
 
@@ -189,68 +183,30 @@ If the user says "tell me more" or "details" or "expand":
 1. Show the full `agent_summary`
 2. If there's a saved JD, mention it and offer to show key sections
 3. If a Company Overview exists, show a 2-3 line summary from it
-4. If no Company Overview exists, note it: "No company research yet — I can do that after we finish reviewing, or you can run `/prep {company}` later."
-5. Re-prompt for a decision:
-
-> What's the call — interested, decline, or skip for now?
+4. If no Company Overview exists, note it: "No company research yet — I can do that after we finish reviewing, or you can run `/jfm:prep {company}` later."
+5. Re-prompt for a decision
 
 ## Batch Shortcuts
 
-The user might want to speed through even faster:
-
-- **"decline all remaining suggestions"** — ask for a blanket reason, apply to all remaining suggested roles, run decline learning once for the batch
+- **"decline all remaining suggestions"** — ask for a blanket reason, apply to all remaining suggested roles
 - **"skip the rest"** — end the review session, leave remaining roles untouched
-- **"only suggestions"** — switch filter mid-session to just new suggestions
-- **"advance all maybes"** — move all Maybe roles to Applied (for when the user has submitted a batch of applications)
+- **"only suggestions"** — switch filter mid-session
+- **"advance all maybes"** — move all Maybe roles to Applied
 
 ## End of Review
 
-After the last role (or when the user says "done" / "that's enough"):
+After the last role (or when the user says "done"):
 
-1. Summarize what happened:
-
-> **Review complete.** {N} roles reviewed:
-> - {X} moved to Maybe
-> - {Y} advanced (Applied / Interviewing)
-> - {Z} declined
-> - {W} skipped
->
-> {If any decline patterns were added:} Updated filters: added "{pattern}" to decline patterns.
->
-> {If background work was launched:}
-> **Background work:**
-> - Acme Corp — interview prep docs ✓ ready
-> - BigCo — company overview ✓ ready
-> - StartupX — interview prep ⏳ still generating
-
-2. The board has been auto-rebuilt after each decision throughout the session. Tell the user:
-
-> Your board is up to date — refresh `Kanban/index.html` to see all changes.
-
-4. If there are roles in Maybe that have been there a while, offer a gentle nudge:
-
-> You've got {N} roles sitting in Maybe. Want to do a quick `/review maybe` to advance or prune them?
+1. Summarize what happened
+2. The board has been auto-rebuilt after each decision throughout the session. Tell the user to refresh `Kanban/index.html`.
+3. If there are roles in Maybe that have been there a while, offer a gentle nudge
 
 ## Compound requests during review
 
-During a review session, users may mention things beyond simple yes/no/decline decisions:
-
-- **"Decline, but the company is interesting"** → decline the role AND add the company to the watch list
-- **"Not this role, but companies in this space..."** → decline AND add the industry to filters.yaml industries list
-- **"My experience at [company] is relevant here"** → note it, and after the review session ends, circle back to capture it as career evidence in profile.yaml
-- **URLs shared during review** → note them, handle after the session (don't break review flow)
-
-**During the review:** handle quick config changes (watch list, skip list, industry adds) inline — they're one command each. Defer evidence capture and URL processing to after the review ends.
-
-**After the review summary**, address any deferred items:
-> You also mentioned some things I want to capture:
-> - Your experience at Woolpert with water utilities — can you tell me more so I can add it to your profile?
-> - The link you shared — let me fetch that and see what's relevant.
+During a review session, users may mention things beyond simple yes/no/decline decisions. **During the review:** handle quick config changes inline. **After the review summary**, address any deferred items.
 
 See `search/references/routing.md` for the full routing decision tree.
 
 ## Tone
 
-Brisk and efficient. This is a working session, not a conversation. Minimal commentary between roles. The user came here to make decisions fast — respect that by keeping the signal-to-noise ratio high.
-
-One role at a time. One decision at a time. No batching questions.
+Brisk and efficient. This is a working session, not a conversation. Minimal commentary between roles. One role at a time. One decision at a time. No batching questions.

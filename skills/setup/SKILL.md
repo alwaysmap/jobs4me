@@ -2,10 +2,10 @@
 name: setup
 description: >
   Use this skill when the user says "set up my job search", "get started",
-  "configure the agent", "onboarding", or uses /setup. On first run, walks
-  through onboarding with a choice of full or quick setup. On subsequent runs,
-  detects existing config and behaves like /tweak — helping the user complete
-  or adjust their setup rather than starting from scratch.
+  "configure the agent", or "onboarding". Also handles the `/jfm:setup` command.
+  On first run, walks through onboarding with a choice of full or quick setup.
+  On subsequent runs, detects existing config and behaves like the tweak skill —
+  helping the user complete or adjust their setup rather than starting from scratch.
 user_summary: >
   Set up your job search profile — your background, the kinds of roles you want,
   target companies, and where to look. Run this once to get started.
@@ -20,7 +20,7 @@ Walk the user through setting up their job search agent. This is a conversationa
 **Before anything else**, check whether `profile.yaml` exists in the workspace.
 
 - **If `profile.yaml` does NOT exist** → this is a first-time setup. Proceed to "Welcome & Setup Choice" below.
-- **If `profile.yaml` exists** → this is a returning user. Do NOT restart onboarding. Instead, read `profile.yaml`, `archetypes.yaml`, and `filters.yaml`, identify what's missing or incomplete, and offer to help fill the gaps — just like `/tweak`. Say:
+- **If `profile.yaml` exists** → this is a returning user. Do NOT restart onboarding. Instead, read `profile.yaml`, `archetypes.yaml`, and `filters.yaml`, identify what's missing or incomplete, and offer to help fill the gaps — same behavior as the tweak skill. Say:
 
 > Welcome back! You already have a profile set up. Let me check what's in place and what could use attention.
 >
@@ -44,7 +44,7 @@ This is the very first message the user sees. It MUST present the two setup path
 >
 > **1. Full setup** (recommended, ~10 minutes) — I'll interview you about your background, preferences, target role types, dream companies, and search sources. This gives the agent the most to work with from day one.
 >
-> **2. Quick start** (~3 minutes) — Just give me your resume and a short description of the kinds of roles you're interested in. I'll infer the rest and you can refine later with `/tweak`.
+> **2. Quick start** (~3 minutes) — Just give me your resume and a short description of the kinds of roles you're interested in. I'll infer the rest and you can refine later with `/jfm:tweak`.
 >
 > Everything is adjustable after either path — nothing is permanent. Which would you prefer?
 
@@ -86,7 +86,7 @@ Write `archetypes.yaml` with the same schema as the full setup. The quick start 
 
 By this point you know the user's background and target roles. Suggest 3-5 specific sources tailored to their field (see "Tailored Source Suggestions" below). Write `filters.yaml` with their sources.
 
-> **Setup complete!** I've got your profile, role types, and sources configured. You can refine any of this later with `/tweak` — add dream companies, more sources, career evidence, or adjust your preferences.
+> **Setup complete!** I've got your profile, role types, and sources configured. You can refine any of this later with `/jfm:tweak` — add dream companies, more sources, career evidence, or adjust your preferences.
 
 Proceed to "First Search Offer" below.
 
@@ -102,7 +102,7 @@ Walk through 5 steps. **Every step transition MUST include the step indicator** 
 >
 > You can give me a link to your resume or LinkedIn, paste your resume text, or just tell me about your career in your own words. Whatever's easiest.
 >
-> Don't worry about getting everything perfect — everything here can be changed later with `/tweak`.
+> Don't worry about getting everything perfect — everything here can be changed later with `/jfm:tweak`.
 
 Read whatever they provide. If it's a URL, fetch it. If it's pasted text, parse it.
 
@@ -155,7 +155,7 @@ preferences:
 >
 > Some examples: portfolio links, open source repos, blog posts, talks, or just describe a project in your own words.
 >
-> Share what you have, or say "skip" to move on. You can always add this later with `/tweak`.
+> Share what you have, or say "skip" to move on. You can always add this later with `/jfm:tweak`.
 
 For each piece of evidence:
 - URL → fetch and extract key points
@@ -168,7 +168,7 @@ evidence:
   evidence_complete: false
 ```
 
-> Totally fine. You can add evidence anytime with `/tweak`. Moving on...
+> Totally fine. You can add evidence anytime with `/jfm:tweak`. Moving on...
 
 ### Step 3 of 5: Role types
 
@@ -207,11 +207,11 @@ Capture both. Then ask about industries:
 
 If they share industries, save them to `filters.yaml` via `update-filter-list --list industries`. If they skip:
 
-> No problem — I'll learn your preferences as we go. You can add industries anytime with `/tweak`.
+> No problem — I'll learn your preferences as we go. You can add industries anytime with `/jfm:tweak`.
 
 If they can't think of many companies:
 
-> No pressure — companies will surface as the agent searches. You can add dream companies anytime with `/tweak`.
+> No pressure — companies will surface as the agent searches. You can add dream companies anytime with `/jfm:tweak`.
 
 ### Step 5 of 5: Search sources
 
@@ -223,7 +223,7 @@ Present tailored source suggestions (see below). Then:
 
 Write `filters.yaml`.
 
-> **Setup complete!** Your profile, role types, companies, and sources are all configured. Everything is adjustable later with `/tweak`.
+> **Setup complete!** Your profile, role types, companies, and sources are all configured. Everything is adjustable later with `/jfm:tweak`.
 
 ---
 
@@ -238,7 +238,7 @@ By Phase 5 (or Quick Start Step 3), you know the user's field. Instead of dumpin
 - **Government:** USAJOBS, governmentjobs.com, LinkedIn
 - **General/mixed:** LinkedIn, Indeed, Glassdoor
 
-Always include LinkedIn as a default. Let them add more with `/tweak`.
+Always include LinkedIn as a default. Let them add more with `/jfm:tweak`.
 
 ---
 
@@ -248,9 +248,9 @@ This phase is shared by both paths. After setup is complete:
 
 > Want me to run a first search now?
 >
-> **Heads up:** The first search takes longer than future ones — expect around **20 minutes**. I'm checking all your sources, assessing each role against your profile, and building your initial board. Future searches are faster because I already know what to skip.
+> **Heads up:** The first search takes longer than future ones — expect around **20 minutes**. I'm checking all your sources and assessing each role against your profile. I'll keep you posted as I go. Future searches are faster because I already know what to skip.
 >
-> You can start the search now and do something else while it runs, or come back later and run `/search` when you're ready.
+> You can start the search now and do something else while it runs, or come back later and run `/jfm:search` when you're ready.
 
 If yes, initialize the tracker (dependencies are vendored with the plugin — no install step needed):
 
@@ -278,21 +278,21 @@ After the first run (or if the user defers the search), **always show this guida
 
 > You're all set! Here's how this works day to day:
 >
-> **`/search`** — runs a new search sweep. You can run it whenever you want, or set it on a schedule.
+> **`/jfm:search`** — runs a new search sweep. You can run it whenever you want, or set it on a schedule.
 >
-> **`/review`** — walk through new suggestions and decide on each one.
+> **`/jfm:review`** — walk through new suggestions and decide on each one.
 >
-> **`/update`** — move a single role through stages. `/update Acme - interviewing`, `/update Acme - decline too much travel`.
+> **`/jfm:update`** — move a single role through stages. `/jfm:update Acme - interviewing`, `/jfm:update Acme - decline too much travel`.
 >
-> **`/assess`** — found a posting on your own? Paste the URL and I'll evaluate it.
+> **`/jfm:assess`** — found a posting on your own? Paste the URL and I'll evaluate it.
 >
-> **`/prep`** — preparing for an interview? I'll research the company and map your experience.
+> **`/jfm:prep`** — preparing for an interview? I'll research the company and map your experience.
 >
-> **`/tweak`** — change anything about your setup. Nothing is locked in.
+> **`/jfm:tweak`** — change anything about your setup. Nothing is locked in.
 >
-> Run `/setup` again anytime — it'll check what's in place and help you fill gaps (same as `/tweak`).
+> Run `/jfm:setup` again anytime — it'll check what's in place and help you fill gaps (same as `/jfm:tweak`).
 >
-> **Automate it:** Schedule `/search` to run daily using the scheduled tasks menu (clock icon). New roles show up on your board without you lifting a finger.
+> **Automate it:** Schedule `/jfm:search` to run daily using the scheduled tasks menu (clock icon). New roles show up on your board without you lifting a finger.
 
 ---
 
@@ -304,5 +304,5 @@ After the first run (or if the user defers the search), **always show this guida
 - **The setup choice (full vs quick) is REQUIRED** on first run. Never skip straight to questions.
 - **The first-search time warning is REQUIRED.** Never let the user start a search without knowing it takes ~20 minutes.
 - Be conversational, not robotic. Acknowledge before moving on.
-- **Reassurance at every step.** Reference `/tweak` so they know nothing is permanent.
+- **Reassurance at every step.** Reference `/jfm:tweak` so they know nothing is permanent.
 - **The What's Next section is REQUIRED.** Always show it after the first run or if the user defers the search.

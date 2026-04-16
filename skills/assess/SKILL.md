@@ -2,9 +2,10 @@
 name: assess
 description: >
   Use this skill when the user wants to assess or evaluate a specific job posting,
-  paste a job URL, ask "is this a good fit?", or use /assess. Fetches the posting,
-  runs a structured fit assessment against the user's profile, and optionally adds
-  it to the tracker. Also use when the user pastes a JD directly and asks for an opinion.
+  paste a job URL, or ask "is this a good fit?". Also handles the `/jfm:assess`
+  command. Fetches the posting, runs a structured fit assessment against the
+  user's profile, and optionally adds it to the tracker. Also use when the user
+  pastes a JD directly and asks for an opinion.
 user_summary: >
   Paste a job URL or description and get a fit assessment — what matches your
   background, what gaps exist, and whether it's worth pursuing.

@@ -2,9 +2,10 @@
 name: board
 description: >
   Use this skill when the user asks to "see the board", "show my board",
-  "generate the kanban", "update the board", "regenerate board.html", "regenerate the board",
-  or after any operation that changes tracker.yaml (search sweep, decline,
-  stage change). Generates a self-contained HTML kanban board from tracker data.
+  "generate the kanban", "update the board", "regenerate board.html", or
+  "regenerate the board". Also handles the `/jfm:board` command and applies
+  after any operation that changes tracker.yaml (search sweep, decline, stage
+  change). Generates a self-contained HTML kanban board from tracker data.
 user_summary: >
   Regenerate your kanban board — a visual overview of every role you're tracking,
   with inline viewing for JDs, company research, and interview prep.
@@ -41,7 +42,7 @@ If the user has `Kanban/index.html` open in their browser, they just refresh to 
 
 ## Board Features
 
-The generated board is **read-only** — it displays the current state of the tracker but does not write changes back. All state changes happen through Claude (via `/update`, `/assess`, or conversation).
+The generated board is **read-only** — it displays the current state of the tracker but does not write changes back. All state changes happen through Claude (via `/jfm:update`, `/jfm:assess`, or conversation).
 
 **Document viewer**: The board embeds markdown document contents (JDs, company overviews, interview prep) at build time. Clicking a document link opens a slide-out panel that renders the markdown as formatted HTML using marked.js. No external files needed — everything is self-contained in the board.
 
@@ -59,8 +60,8 @@ Features:
 The board does NOT include:
 - Drag and drop (changes must go through Claude)
 - Save functionality (read-only)
-- Briefs panel (briefs are viewed via `/brief` command)
-- Interested/Decline buttons (use `/decline` command instead)
+- Briefs panel (briefs are viewed via the search brief output)
+- Interested/Decline buttons (use `/jfm:update` instead)
 
 ## When to Regenerate
 
@@ -68,9 +69,9 @@ The board auto-rebuilds on every tracker mutation. There is no need to check fre
 
 ## When to Offer the Board
 
-Always tell the user to open or refresh the board after any operation that changes their pipeline — search sweeps, stage changes, declines, review sessions. The board is always current because it auto-rebuilds on every mutation. The user should never need to run `/board` manually unless they want to force a rebuild after editing YAML files by hand.
+Always tell the user to open or refresh the board after any operation that changes their pipeline — search sweeps, stage changes, declines, review sessions. The board is always current because it auto-rebuilds on every mutation. The user should never need to run `/jfm:board` manually unless they want to force a rebuild after editing YAML files by hand.
 
-**After every `/search` command:** The kanban board MUST be presented as a file via `present_files` at the end of every search. The board is how users check out the brief and visualize all jobs — this is non-negotiable.
+**After every `/jfm:search` command:** The kanban board MUST be presented as a file via `present_files` at the end of every search. The board is how users check out the brief and visualize all jobs — this is non-negotiable.
 
 **IMPORTANT: How to share the board (and all files) with the user.**
 

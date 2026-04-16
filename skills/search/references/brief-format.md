@@ -61,7 +61,7 @@ After each search sweep, write a brief to `briefs/{YYYY-MM-DD}.md` (or `{YYYY-MM
 | water utilities | 2 | Both at regional utilities, director-level |
 | industrial data | 1 | Cognite — stretch on seniority |
 
-{If no roles matched any industry interest, say so: "No roles found in your preferred industries this sweep. Consider adding more sources in these sectors — I can suggest some if you run /tweak."}
+{If no roles matched any industry interest, say so: "No roles found in your preferred industries this sweep. Consider adding more sources in these sectors — I can suggest some if you run `/jfm:tweak`."}
 
 ## Market Observations
 

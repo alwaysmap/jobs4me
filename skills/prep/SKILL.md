@@ -2,9 +2,10 @@
 name: prep
 description: >
   Use this skill when the user says "I have an interview", "help me prepare",
-  "prep for my interview at {company}", "create interview prep", "company overview",
-  or when a role moves to the interviewing stage. Generates two research documents:
-  a company overview and an interview prep guide with experience-mapped case studies.
+  "prep for my interview at {company}", "create interview prep", or "company overview".
+  Also handles the `/jfm:prep` command and triggers when a role moves to the
+  interviewing stage. Generates two research documents: a company overview and an
+  interview prep guide with experience-mapped case studies.
 user_summary: >
   Prepare for an interview — generates a company overview and an interview guide
   with talking points mapped to your actual experience.

@@ -14,9 +14,9 @@ weight: 1
 First, [install the Claude desktop app](https://claude.ai/download) if you haven't already.
 
 1. Go to **Customize > Plugins > Personal > + > Add marketplace**
-2. Paste the link to `alwaysmap/jobs4me` on GitHub
+2. Paste: `alwaysmap/marketplace`
 3. Restart Claude Desktop (the initial sync can take a moment)
-4. Go back to **Plugins > Personal**, find **Jfm**, and click **+** to enable it
+4. Go back to **Plugins > Personal**, find **Jobs for Me**, and click **+** to enable it
 5. Start a new Cowork session and select a folder for your job search data
 
 See [Managing plugins](https://docs.anthropic.com/en/docs/claude-ai/plugins#managing-plugins) in the Claude docs for more details.
@@ -30,8 +30,8 @@ If you have [Claude Code](https://docs.anthropic.com/en/docs/claude-code) instal
 **Add the marketplace and install:**
 
 ```bash
-# Add the jobs4me marketplace
-claude plugin marketplace add alwaysmap/jobs4me
+# Add the alwaysmap marketplace
+claude plugin marketplace add alwaysmap/marketplace
 
 # Update marketplace listings
 claude plugin marketplace update
@@ -40,7 +40,7 @@ claude plugin marketplace update
 claude plugin marketplace list
 
 # Install the plugin
-claude plugin install jfm@jobs4me
+claude plugin install jfm@alwaysmap
 ```
 
 **Verify the installation:**
@@ -87,17 +87,12 @@ This serves the board over HTTPS on your tailnet, accessible from any device. Th
 
 ### Desktop App
 
-The Desktop app syncs the plugin from GitHub by git commit. To check for updates:
+When a new version is available, Claude Desktop will show an update prompt next to the plugin.
+To check manually:
 
 1. Go to **Customize > Plugins > Personal**
-2. Click the **...** menu next to `jobs4me`
+2. Click the **...** menu next to **Jobs for Me**
 3. Click **Check for updates**
-
-If the version doesn't update after checking, remove the marketplace and re-add it:
-
-1. Click **...** > **Remove**
-2. Click **+** > **Add marketplace** and paste `alwaysmap/jobs4me` again
-3. Re-enable the plugin
 
 ### Claude Code
 
@@ -106,7 +101,7 @@ If the version doesn't update after checking, remove the marketplace and re-add 
 claude plugin marketplace update
 
 # Update the plugin
-claude plugin update jfm@jobs4me
+claude plugin update jfm@alwaysmap
 ```
 
 Restart Claude Code to apply the update.
