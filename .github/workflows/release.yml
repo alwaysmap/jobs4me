@@ -49,7 +49,7 @@ jobs:
       - uses: peter-evans/repository-dispatch@v3
         with:
           token: ${{ secrets.MARKETPLACE_DISPATCH_TOKEN }}
-          repository: alwaysmap/marketplace
+          repository: alwaysmap/alwaysmap-marketplace
           event-type: plugin-released
           client-payload: |
             {

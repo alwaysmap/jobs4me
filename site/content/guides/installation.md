@@ -14,7 +14,7 @@ weight: 1
 First, [install the Claude desktop app](https://claude.ai/download) if you haven't already.
 
 1. Go to **Customize > Plugins > Personal > + > Add marketplace**
-2. Paste: `alwaysmap/marketplace`
+2. Paste: `alwaysmap/alwaysmap-marketplace`
 3. Restart Claude Desktop (the initial sync can take a moment)
 4. Go back to **Plugins > Personal**, find **Jobs for Me**, and click **+** to enable it
 5. Start a new Cowork session and select a folder for your job search data
@@ -31,7 +31,7 @@ If you have [Claude Code](https://docs.anthropic.com/en/docs/claude-code) instal
 
 ```bash
 # Add the alwaysmap marketplace
-claude plugin marketplace add alwaysmap/marketplace
+claude plugin marketplace add alwaysmap/alwaysmap-marketplace
 
 # Update marketplace listings
 claude plugin marketplace update

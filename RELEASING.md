@@ -17,4 +17,4 @@ Release, and notifies the marketplace. Nothing else to do.
 ## Prerequisites
 
 `MARKETPLACE_DISPATCH_TOKEN` must be set in this repo's Actions secrets — a fine-grained
-PAT scoped to `alwaysmap/marketplace` with Contents write permission.
+PAT scoped to `alwaysmap/alwaysmap-marketplace` with Contents write permission.
