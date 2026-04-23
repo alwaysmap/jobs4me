@@ -38,7 +38,7 @@ setup_workspace() {
   local ws
   ws=$(mktemp -d 2>/dev/null || mktemp -d -t 'jfm-test')
   WORKSPACES+=("$ws")
-  node "$TRACKER" init --dir="$ws" >/dev/null 2>&1
+  node "$TRACKER" init --dir "$ws" >/dev/null 2>&1
   echo "$ws"
 }
 
@@ -130,7 +130,160 @@ fail() {
 # Register scenarios here. Each entry must be the name of a shell function
 # defined below. Units 2-5 append their scenarios to this list.
 TESTS=(
+  # Unit 2: parseJsonArg helper — exercised via update-filter-list --add
+  test_ufl_add_array_happy_path
+  test_ufl_add_empty_array_noop
+  test_ufl_add_missing_value_flag_only
+  test_ufl_add_empty_string_value
+  test_ufl_add_invalid_json_bare_token
+  test_ufl_add_shape_mismatch_string_crusoe
+  test_ufl_add_shape_mismatch_object
+  test_ufl_add_shape_mismatch_number
+  test_ufl_add_shape_mismatch_null
+  test_ufl_add_shape_mismatch_boolean
 )
+
+# ── Unit 2 scenarios ───────────────────────────────────────────
+
+test_ufl_add_array_happy_path() {
+  local ws
+  ws=$(setup_workspace)
+  local out
+  out=$(node "$TRACKER" update-filter-list --dir "$ws" --list target_companies --add '["Acme"]' 2>&1)
+  assert_exit_code 0 "$?" "happy-path array add"
+  assert_file_contains "$ws/filters.yaml" "Acme" "filters.yaml should contain Acme"
+}
+
+test_ufl_add_empty_array_noop() {
+  local ws
+  ws=$(setup_workspace)
+  # Prime filters.yaml with a known entry so we can prove the no-op preserves it.
+  node "$TRACKER" update-filter-list --dir "$ws" --list target_companies --add '["Seed"]' >/dev/null 2>&1
+  local before
+  before=$(cat "$ws/filters.yaml")
+  node "$TRACKER" update-filter-list --dir "$ws" --list target_companies --add '[]' >/dev/null 2>&1
+  assert_exit_code 0 "$?" "empty-array no-op exit"
+  local after
+  after=$(cat "$ws/filters.yaml")
+  if [ "$before" != "$after" ]; then
+    fail "empty-array no-op should leave filters.yaml unchanged"
+  fi
+}
+
+test_ufl_add_missing_value_flag_only() {
+  local ws
+  ws=$(setup_workspace)
+  local stderr
+  set +e
+  stderr=$(node "$TRACKER" update-filter-list --dir "$ws" --list target_companies --add 2>&1 >/dev/null)
+  local rc=$?
+  set -e
+  assert_exit_code 1 "$rc" "flag-only --add exit"
+  assert_contains "$stderr" "missing required --add" "flag-only --add error names flag"
+}
+
+test_ufl_add_empty_string_value() {
+  local ws
+  ws=$(setup_workspace)
+  local stderr
+  set +e
+  stderr=$(node "$TRACKER" update-filter-list --dir "$ws" --list target_companies --add '' 2>&1 >/dev/null)
+  local rc=$?
+  set -e
+  assert_exit_code 1 "$rc" "empty-string --add exit"
+  assert_contains "$stderr" "missing required --add" "empty-string --add error names flag"
+}
+
+test_ufl_add_invalid_json_bare_token() {
+  local ws
+  ws=$(setup_workspace)
+  # Prime filters.yaml so we can detect any byte-level change on error.
+  node "$TRACKER" update-filter-list --dir "$ws" --list target_companies --add '["Seed"]' >/dev/null 2>&1
+  local before
+  before=$(cat "$ws/filters.yaml")
+  local stderr
+  set +e
+  stderr=$(node "$TRACKER" update-filter-list --dir "$ws" --list target_companies --add 'Crusoe' 2>&1 >/dev/null)
+  local rc=$?
+  set -e
+  assert_exit_code 1 "$rc" "invalid-JSON --add exit"
+  assert_contains "$stderr" "invalid JSON for --add" "invalid JSON names flag"
+  assert_contains "$stderr" '["Acme", "Crusoe"]' "invalid JSON includes shape hint"
+  local after
+  after=$(cat "$ws/filters.yaml")
+  if [ "$before" != "$after" ]; then
+    fail "invalid-JSON --add should leave filters.yaml unchanged"
+  fi
+}
+
+test_ufl_add_shape_mismatch_string_crusoe() {
+  local ws
+  ws=$(setup_workspace)
+  # Prime filters.yaml so we can prove the Crusoe repro leaves it byte-for-byte unchanged.
+  node "$TRACKER" update-filter-list --dir "$ws" --list target_companies --add '["Seed"]' >/dev/null 2>&1
+  local before
+  before=$(cat "$ws/filters.yaml")
+  local stderr
+  set +e
+  stderr=$(node "$TRACKER" update-filter-list --dir "$ws" --list target_companies --add '"Crusoe"' 2>&1 >/dev/null)
+  local rc=$?
+  set -e
+  assert_exit_code 1 "$rc" "string-shape --add exit (Crusoe repro)"
+  assert_contains "$stderr" "expected JSON array for --add, got string" "Crusoe shape-mismatch error"
+  local after
+  after=$(cat "$ws/filters.yaml")
+  if [ "$before" != "$after" ]; then
+    fail "Crusoe repro should leave filters.yaml byte-for-byte unchanged"
+  fi
+}
+
+test_ufl_add_shape_mismatch_object() {
+  local ws
+  ws=$(setup_workspace)
+  local stderr
+  set +e
+  stderr=$(node "$TRACKER" update-filter-list --dir "$ws" --list target_companies --add '{"a":1}' 2>&1 >/dev/null)
+  local rc=$?
+  set -e
+  assert_exit_code 1 "$rc" "object-shape --add exit"
+  assert_contains "$stderr" "expected JSON array for --add, got object" "object-shape error"
+}
+
+test_ufl_add_shape_mismatch_number() {
+  local ws
+  ws=$(setup_workspace)
+  local stderr
+  set +e
+  stderr=$(node "$TRACKER" update-filter-list --dir "$ws" --list target_companies --add '42' 2>&1 >/dev/null)
+  local rc=$?
+  set -e
+  assert_exit_code 1 "$rc" "number-shape --add exit"
+  assert_contains "$stderr" "got number" "number-shape error"
+}
+
+test_ufl_add_shape_mismatch_null() {
+  local ws
+  ws=$(setup_workspace)
+  local stderr
+  set +e
+  stderr=$(node "$TRACKER" update-filter-list --dir "$ws" --list target_companies --add 'null' 2>&1 >/dev/null)
+  local rc=$?
+  set -e
+  assert_exit_code 1 "$rc" "null-shape --add exit"
+  assert_contains "$stderr" "got null" "null-shape error"
+}
+
+test_ufl_add_shape_mismatch_boolean() {
+  local ws
+  ws=$(setup_workspace)
+  local stderr
+  set +e
+  stderr=$(node "$TRACKER" update-filter-list --dir "$ws" --list target_companies --add 'true' 2>&1 >/dev/null)
+  local rc=$?
+  set -e
+  assert_exit_code 1 "$rc" "boolean-shape --add exit"
+  assert_contains "$stderr" "got boolean" "boolean-shape error"
+}
 
 # ── Runner ─────────────────────────────────────────────────────
 

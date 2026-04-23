@@ -112,6 +112,66 @@ function parseArgs(argv) {
   return args;
 }
 
+// JSON-shape hint examples embedded in parseJsonArg error messages.
+// Neutral (no shell quoting) so agents in any invocation context can
+// reconstruct the correct JSON for their shell.
+const SHAPE_HINT = {
+  array:  '["Acme", "Crusoe"]',
+  object: '{"notes":"..."}',
+};
+
+/**
+ * Parse and shape-validate a JSON-valued CLI flag.
+ *
+ * Throws with a specific, flag-named error on any of:
+ *   - missing or non-string value (undefined, null, empty string, or a
+ *     boolean `true` left behind by parseArgs when a flag appears with
+ *     no following value)
+ *   - invalid JSON
+ *   - parsed value whose shape doesn't match `expect`
+ *
+ * Returns the parsed value on success.
+ *
+ * @param {unknown} raw — the arg value, typically args.X from parseArgs
+ * @param {string} flagName — the flag name without the leading "--"
+ * @param {{ expect: 'array' | 'object' }} options
+ */
+function parseJsonArg(raw, flagName, { expect }) {
+  if (raw === undefined || raw === null || raw === '' || typeof raw !== 'string') {
+    throw new Error(`missing required --${flagName}`);
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    const snippet = raw.length > 40 ? raw.slice(0, 40) + '...' : raw;
+    throw new Error(
+      `invalid JSON for --${flagName}: ${snippet}. Expected a JSON ${expect}, e.g. ${SHAPE_HINT[expect]}.`
+    );
+  }
+
+  const isObject = parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed);
+  const typeLabel = Array.isArray(parsed)
+    ? 'array'
+    : parsed === null
+      ? 'null'
+      : typeof parsed;
+
+  if (expect === 'array' && !Array.isArray(parsed)) {
+    throw new Error(
+      `expected JSON array for --${flagName}, got ${typeLabel}. Expected shape: ${SHAPE_HINT.array}.`
+    );
+  }
+  if (expect === 'object' && !isObject) {
+    throw new Error(
+      `expected JSON object for --${flagName}, got ${typeLabel}. Expected shape: ${SHAPE_HINT.object}.`
+    );
+  }
+
+  return parsed;
+}
+
 // ────────────────────────────────────────────────────────────────
 // Path helpers
 // ────────────────────────────────────────────────────────────────
@@ -1022,7 +1082,7 @@ const commands = {
     let items = doc[list] || [];
 
     if (args.add) {
-      const toAdd = JSON.parse(args.add);
+      const toAdd = parseJsonArg(args.add, 'add', { expect: 'array' });
       const existing = new Set(items.map(s => s.toLowerCase()));
       for (const item of toAdd) {
         if (!existing.has(item.toLowerCase())) {
