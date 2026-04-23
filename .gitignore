@@ -16,3 +16,6 @@ briefs/
 Kanban/
 .backups/
 .claude/
+
+# CE skill ephemeral workspace (review artifacts, etc.)
+.context/
