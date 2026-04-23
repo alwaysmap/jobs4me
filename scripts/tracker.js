@@ -137,7 +137,10 @@ const SHAPE_HINT = {
  * @param {{ expect: 'array' | 'object' }} options
  */
 function parseJsonArg(raw, flagName, { expect }) {
-  if (raw === undefined || raw === null || raw === '' || typeof raw !== 'string') {
+  // A non-string raw covers: undefined/null (flag absent), boolean true
+  // (flag present with no following value — parseArgs sets args[key] = true),
+  // and any future non-string value. parseArgs never hands us the empty string.
+  if (typeof raw !== 'string') {
     throw new Error(`missing required --${flagName}`);
   }
 
@@ -170,6 +173,22 @@ function parseJsonArg(raw, flagName, { expect }) {
   }
 
   return parsed;
+}
+
+/**
+ * Coerce an optional scalar flag value to a string, rejecting the
+ * flag-without-value case where parseArgs leaves `args[key] = true`.
+ *
+ * Use this for optional text flags like --reason on decline / batch-decline.
+ * Returns '' when the flag was absent, the supplied string when present,
+ * and throws on any non-string value (boolean `true`, etc.).
+ */
+function requireOptionalString(raw, flagName) {
+  if (raw === undefined) return '';
+  if (typeof raw !== 'string') {
+    throw new Error(`--${flagName} requires a string value`);
+  }
+  return raw;
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -829,7 +848,8 @@ const commands = {
 
   decline(dir, args) {
     const doc = readTracker(dir);
-    const app = declineEntry(doc, args.id, args.reason || '');
+    const reason = requireOptionalString(args.reason, 'reason');
+    const app = declineEntry(doc, args.id, reason);
     writeTracker(dir, doc);
     return { ...app, stored_at: { reason: 'decision.reason', declined_date: 'dates.declined' } };
   },
@@ -946,7 +966,7 @@ const commands = {
     if (ids.length === 0) throw new Error('No IDs provided');
 
     const doc = readTracker(dir);
-    const reason = args.reason || '';
+    const reason = requireOptionalString(args.reason, 'reason');
     const results = ids.map(id => {
       try {
         const app = declineEntry(doc, id, reason);
@@ -956,13 +976,17 @@ const commands = {
       }
     });
 
-    writeTracker(dir, doc);
-    return {
-      declined: results.filter(r => r.ok).length,
-      total: ids.length,
-      stored_at: { reason: 'decision.reason', declined_date: 'dates.declined' },
-      results,
-    };
+    const declined = results.filter(r => r.ok).length;
+    // Only write if at least one decline succeeded — keeps backups clean
+    // when every id was invalid and no mutation actually happened.
+    if (declined > 0) writeTracker(dir, doc);
+    const out = { declined, total: ids.length, results };
+    // stored_at is only meaningful when at least one write landed; omitting
+    // it on all-failure batches avoids falsely implying paths were written.
+    if (declined > 0) {
+      out.stored_at = { reason: 'decision.reason', declined_date: 'dates.declined' };
+    }
+    return out;
   },
 
   'filter-candidates'(dir, args) {

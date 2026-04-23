@@ -167,6 +167,9 @@ TESTS=(
   test_stage_stored_at_alias_resolution
   test_batch_decline_stored_at_top_level
   test_batch_decline_mixed_success_failure
+  test_batch_decline_all_failure_omits_stored_at
+  test_decline_reason_without_value_rejected
+  test_batch_decline_reason_without_value_rejected
   test_stored_at_not_persisted_to_yaml
   test_stored_at_not_rendered_to_board
 )
@@ -403,11 +406,15 @@ test_wiring_batch_happy_path() {
   # Seed a record, then decline it via batch to exercise the happy path.
   local id
   id=$(node "$TRACKER" add --dir "$ws" --json '{"company":"BatchCo","role":"TPM"}' 2>/dev/null | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{const o=JSON.parse(d);process.stdout.write(o.id);})')
+  local out
   set +e
-  node "$TRACKER" batch --dir "$ws" --json "[{\"op\":\"decline\",\"id\":\"$id\"}]" >/dev/null 2>&1
+  out=$(node "$TRACKER" batch --dir "$ws" --json "[{\"op\":\"decline\",\"id\":\"$id\"}]" 2>/dev/null)
   local rc=$?
   set -e
   assert_exit_code 0 "$rc" "batch happy-path exit"
+  # batch returns exit 0 even when all per-op calls fail; assert on the
+  # actual per-op result so a regression can't hide behind exit 0.
+  assert_json_field "$out" "results.0.ok" "true" "batch per-op success"
 }
 
 test_wiring_filter_candidates_shape_mismatch() {
@@ -540,21 +547,18 @@ test_set_archetypes_role_types_wrong_type_errors() {
 }
 
 test_no_json_parse_args_remains() {
-  # R6: structural grep — no JSON.parse(args.X) left in tracker.js after Unit 4.
+  # R6: structural grep — no JSON.parse(args.*) left in tracker.js after Unit 4.
+  # Pattern intentionally omits the trailing '.' so bracket-notation forms
+  # (JSON.parse(args['json'])) also fail the check. The only permitted site
+  # is JSON.parse(raw) inside parseJsonArg.
   local count
-  count=$(grep -c 'JSON\.parse(args\.' "$SCRIPT_DIR/tracker.js" || true)
+  count=$(grep -c 'JSON\.parse(args' "$SCRIPT_DIR/tracker.js" || true)
   if [ "$count" != "0" ]; then
-    fail "expected 0 JSON.parse(args.X) sites in tracker.js, found $count"
+    fail "expected 0 JSON.parse(args.*) sites in tracker.js, found $count"
   fi
 }
 
 # ── Unit 5 scenarios: stored_at annotations ────────────────────
-
-# Helper — capture the JSON stdout from a command that succeeds.
-# Usage: out=$(run_tracker_json <args...>)
-run_tracker_json() {
-  node "$TRACKER" "$@" 2>/dev/null
-}
 
 # Seed a single application and echo its id.
 seed_app() {
@@ -593,19 +597,17 @@ test_stage_stored_at() {
 }
 
 test_stage_stored_at_alias_resolution() {
-  # STAGE_ALIASES maps 'possible' → 'suggested' at scripts/tracker.js.
-  # stored_at.stage_date must reflect the canonical (resolved) name, not the alias.
+  # STAGE_ALIASES in scripts/tracker.js maps 'possible' -> 'maybe'.
+  # stored_at.stage_date must reflect the resolved canonical name ('maybe'),
+  # not the alias the caller typed ('possible').
   local ws
   ws=$(setup_workspace)
   local id
   id=$(seed_app "$ws")
-  # First move to suggested → then maybe (both are valid transitions from suggested).
-  node "$TRACKER" stage --dir "$ws" --id "$id" --stage maybe >/dev/null 2>&1
   local out
-  out=$(node "$TRACKER" stage --dir "$ws" --id "$id" --stage applied 2>/dev/null)
-  # stored_at.stage_date should be 'dates.applied' (the resolved canonical name),
-  # regardless of any alias a caller might pass later.
-  assert_json_field "$out" "stored_at.stage_date" "dates.applied" "stage_date reflects resolved stage name"
+  out=$(node "$TRACKER" stage --dir "$ws" --id "$id" --stage possible 2>/dev/null)
+  assert_json_field "$out" "stage"                "maybe"      "alias resolves to canonical stage"
+  assert_json_field "$out" "stored_at.stage_date" "dates.maybe" "stage_date reflects resolved name, not alias"
 }
 
 test_batch_decline_stored_at_top_level() {
@@ -645,6 +647,56 @@ test_batch_decline_mixed_success_failure() {
   assert_json_field "$out" "results.1.stored_at" "__undefined__" "failure element has no stored_at (no write occurred)"
 }
 
+test_batch_decline_all_failure_omits_stored_at() {
+  # When every id is invalid, declined=0, writeTracker doesn't fire, and
+  # stored_at must be omitted — otherwise the response falsely claims
+  # writes occurred at the documented yaml paths.
+  local ws
+  ws=$(setup_workspace)
+  local out
+  out=$(node "$TRACKER" batch-decline --dir "$ws" --ids "ghost-a,ghost-b" --reason "all fail" 2>/dev/null)
+  assert_json_field "$out" "declined"        "0"             "all-failure declined count"
+  assert_json_field "$out" "total"           "2"             "all-failure total count"
+  assert_json_field "$out" "stored_at"       "__undefined__" "stored_at omitted when no writes occurred"
+  assert_json_field "$out" "results.0.ok"    "false"         "all-failure element 0 ok=false"
+  assert_json_field "$out" "results.1.ok"    "false"         "all-failure element 1 ok=false"
+}
+
+test_decline_reason_without_value_rejected() {
+  # decline --reason with no following value: parseArgs sets args.reason=true
+  # (boolean). The guard must reject it before it reaches declineEntry, which
+  # would otherwise persist boolean `true` to decision.reason in the yaml.
+  local ws
+  ws=$(setup_workspace)
+  local id
+  id=$(seed_app "$ws")
+  local stderr
+  set +e
+  stderr=$(node "$TRACKER" decline --dir "$ws" --id "$id" --reason 2>&1 >/dev/null)
+  local rc=$?
+  set -e
+  assert_exit_code 1 "$rc" "decline --reason without value exit"
+  assert_contains "$stderr" "--reason requires a string value" "decline --reason error names the flag"
+  # tracker.yaml should have NO 'reason: true' entry (that would be the bug).
+  assert_file_not_contains "$ws/tracker.yaml" "reason: true" "no boolean reason persisted"
+}
+
+test_batch_decline_reason_without_value_rejected() {
+  # Same guard on batch-decline: flag-without-value becomes boolean true and
+  # must be rejected before declineEntry runs across every id.
+  local ws
+  ws=$(setup_workspace)
+  local id
+  id=$(seed_app "$ws")
+  local stderr
+  set +e
+  stderr=$(node "$TRACKER" batch-decline --dir "$ws" --ids "$id" --reason 2>&1 >/dev/null)
+  local rc=$?
+  set -e
+  assert_exit_code 1 "$rc" "batch-decline --reason without value exit"
+  assert_contains "$stderr" "--reason requires a string value" "batch-decline --reason error names the flag"
+}
+
 test_stored_at_not_persisted_to_yaml() {
   local ws
   ws=$(setup_workspace)
@@ -663,11 +715,14 @@ test_stored_at_not_rendered_to_board() {
   ws=$(setup_workspace)
   local id
   id=$(seed_app "$ws")
-  # decline auto-rebuilds the board; confirm the rendered html has no stored_at.
+  # decline auto-rebuilds the board at Kanban/index.html (not $ws/index.html).
+  # An unconditional assertion catches both "stored_at leaked" and "board
+  # rebuild silently stopped running" — either breaks the contract.
   node "$TRACKER" decline --dir "$ws" --id "$id" --reason "board test" >/dev/null 2>&1
-  if [ -f "$ws/index.html" ]; then
-    assert_file_not_contains "$ws/index.html" "stored_at" "stored_at not rendered to index.html"
+  if [ ! -f "$ws/Kanban/index.html" ]; then
+    fail "decline did not produce Kanban/index.html (auto-board-rebuild missing)"
   fi
+  assert_file_not_contains "$ws/Kanban/index.html" "stored_at" "stored_at not rendered to board html"
 }
 
 run_tests
