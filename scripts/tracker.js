@@ -1226,7 +1226,25 @@ const commands = {
       },
     };
 
-    if (file === 'all') return schemas;
+    // CLI-layer annotations — not persisted to yaml, only present on
+    // command return values. Documents where nested-write commands land
+    // their inputs on disk so agents don't have to guess.
+    const command_outputs = {
+      decline: {
+        returns: 'bare app record + top-level stored_at annotation',
+        stored_at: { reason: 'decision.reason', declined_date: 'dates.declined' },
+      },
+      stage: {
+        returns: 'bare app record + top-level stored_at annotation',
+        stored_at: { stage: 'stage', stage_date: 'dates.<resolved-stage>' },
+      },
+      'batch-decline': {
+        returns: '{ declined, total, results, stored_at? } — stored_at is present only when declined > 0',
+        stored_at: { reason: 'decision.reason', declined_date: 'dates.declined' },
+      },
+    };
+
+    if (file === 'all') return { ...schemas, command_outputs };
     if (!schemas[file]) throw new Error(`Unknown file: "${file}". Valid: ${Object.keys(schemas).join(', ')}`);
     return schemas[file];
   },

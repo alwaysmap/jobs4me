@@ -55,6 +55,8 @@ Common shorthand the user might use (map these to stages):
    node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js decline --id <id> --reason "reason text"
    ```
 
+   The response includes a top-level `stored_at` map pointing to where the value landed in `tracker.yaml` — use it to confirm (e.g. `stored_at.reason === "decision.reason"`) rather than guessing field paths. To decline several roles at once, use `batch-decline --ids a,b,c --reason "..."` — its response carries the same `stored_at` block at the top level (present only when at least one decline succeeded).
+
    Run the decline pattern learning process (from the search skill's decline-learning reference):
    - Check if this decline suggests a new pattern or refines an existing one
    - If a new pattern should be added:
@@ -68,6 +70,8 @@ Common shorthand the user might use (map these to stages):
    ```bash
    node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js stage --id <id> --stage <stage>
    ```
+
+   The response includes a top-level `stored_at` map (`stage` → the top-level `stage` field; `stage_date` → `dates.<resolved-stage>`) so you can verify where the update landed without inspecting the yaml directly. Commands that take `--json` (`add`, `update`, `set-*`, `update-filter-list`) do not return `stored_at` — their target paths are named explicitly by the caller.
 
    If the user included a note, update the entry:
    ```bash
