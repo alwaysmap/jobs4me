@@ -112,6 +112,85 @@ function parseArgs(argv) {
   return args;
 }
 
+// JSON-shape hint examples embedded in parseJsonArg error messages.
+// Neutral (no shell quoting) so agents in any invocation context can
+// reconstruct the correct JSON for their shell.
+const SHAPE_HINT = {
+  array:  '["Acme", "Crusoe"]',
+  object: '{"notes":"..."}',
+};
+
+/**
+ * Parse and shape-validate a JSON-valued CLI flag.
+ *
+ * Throws with a specific, flag-named error on any of:
+ *   - missing or non-string value (undefined, null, empty string, or a
+ *     boolean `true` left behind by parseArgs when a flag appears with
+ *     no following value)
+ *   - invalid JSON
+ *   - parsed value whose shape doesn't match `expect`
+ *
+ * Returns the parsed value on success.
+ *
+ * @param {unknown} raw — the arg value, typically args.X from parseArgs
+ * @param {string} flagName — the flag name without the leading "--"
+ * @param {{ expect: 'array' | 'object' }} options
+ */
+function parseJsonArg(raw, flagName, { expect }) {
+  // A non-string raw covers: undefined/null (flag absent), boolean true
+  // (flag present with no following value — parseArgs sets args[key] = true),
+  // and any future non-string value. parseArgs never hands us the empty string.
+  if (typeof raw !== 'string') {
+    throw new Error(`missing required --${flagName}`);
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    const snippet = raw.length > 40 ? raw.slice(0, 40) + '...' : raw;
+    throw new Error(
+      `invalid JSON for --${flagName}: ${snippet}. Expected a JSON ${expect}, e.g. ${SHAPE_HINT[expect]}.`
+    );
+  }
+
+  const isObject = parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed);
+  const typeLabel = Array.isArray(parsed)
+    ? 'array'
+    : parsed === null
+      ? 'null'
+      : typeof parsed;
+
+  if (expect === 'array' && !Array.isArray(parsed)) {
+    throw new Error(
+      `expected JSON array for --${flagName}, got ${typeLabel}. Expected shape: ${SHAPE_HINT.array}.`
+    );
+  }
+  if (expect === 'object' && !isObject) {
+    throw new Error(
+      `expected JSON object for --${flagName}, got ${typeLabel}. Expected shape: ${SHAPE_HINT.object}.`
+    );
+  }
+
+  return parsed;
+}
+
+/**
+ * Coerce an optional scalar flag value to a string, rejecting the
+ * flag-without-value case where parseArgs leaves `args[key] = true`.
+ *
+ * Use this for optional text flags like --reason on decline / batch-decline.
+ * Returns '' when the flag was absent, the supplied string when present,
+ * and throws on any non-string value (boolean `true`, etc.).
+ */
+function requireOptionalString(raw, flagName) {
+  if (raw === undefined) return '';
+  if (typeof raw !== 'string') {
+    throw new Error(`--${flagName} requires a string value`);
+  }
+  return raw;
+}
+
 // ────────────────────────────────────────────────────────────────
 // Path helpers
 // ────────────────────────────────────────────────────────────────
@@ -755,30 +834,33 @@ const commands = {
 
   add(dir, args) {
     const doc = readTracker(dir);
-    const entry = addEntry(doc, JSON.parse(args.json));
+    const entry = addEntry(doc, parseJsonArg(args.json, 'json', { expect: 'object' }));
     writeTracker(dir, doc);
     return entry;
   },
 
   update(dir, args) {
     const doc = readTracker(dir);
-    const app = updateEntry(doc, args.id, JSON.parse(args.json));
+    const app = updateEntry(doc, args.id, parseJsonArg(args.json, 'json', { expect: 'object' }));
     writeTracker(dir, doc);
     return app;
   },
 
   decline(dir, args) {
     const doc = readTracker(dir);
-    const app = declineEntry(doc, args.id, args.reason || '');
+    const reason = requireOptionalString(args.reason, 'reason');
+    const app = declineEntry(doc, args.id, reason);
     writeTracker(dir, doc);
-    return app;
+    return { ...app, stored_at: { reason: 'decision.reason', declined_date: 'dates.declined' } };
   },
 
   stage(dir, args) {
     const doc = readTracker(dir);
     const app = stageEntry(doc, args.id, args.stage);
     writeTracker(dir, doc);
-    return app;
+    // stageEntry writes the resolved stage name back to app.stage; read it
+    // post-call to build the stored_at path without re-applying STAGE_ALIASES.
+    return { ...app, stored_at: { stage: 'stage', stage_date: `dates.${app.stage}` } };
   },
 
   count(dir) {
@@ -852,8 +934,8 @@ const commands = {
   // ── Batch & bulk ──
 
   batch(dir, args) {
-    const ops = JSON.parse(args.json);
-    if (!Array.isArray(ops) || ops.length === 0) {
+    const ops = parseJsonArg(args.json, 'json', { expect: 'array' });
+    if (ops.length === 0) {
       throw new Error('batch expects a non-empty JSON array of operations');
     }
 
@@ -884,7 +966,7 @@ const commands = {
     if (ids.length === 0) throw new Error('No IDs provided');
 
     const doc = readTracker(dir);
-    const reason = args.reason || '';
+    const reason = requireOptionalString(args.reason, 'reason');
     const results = ids.map(id => {
       try {
         const app = declineEntry(doc, id, reason);
@@ -894,12 +976,21 @@ const commands = {
       }
     });
 
-    writeTracker(dir, doc);
-    return { declined: results.filter(r => r.ok).length, total: ids.length, results };
+    const declined = results.filter(r => r.ok).length;
+    // Only write if at least one decline succeeded — keeps backups clean
+    // when every id was invalid and no mutation actually happened.
+    if (declined > 0) writeTracker(dir, doc);
+    const out = { declined, total: ids.length, results };
+    // stored_at is only meaningful when at least one write landed; omitting
+    // it on all-failure batches avoids falsely implying paths were written.
+    if (declined > 0) {
+      out.stored_at = { reason: 'decision.reason', declined_date: 'dates.declined' };
+    }
+    return out;
   },
 
   'filter-candidates'(dir, args) {
-    const candidates = JSON.parse(args.json);
+    const candidates = parseJsonArg(args.json, 'json', { expect: 'array' });
     const existing = new Set(
       readTracker(dir).applications.map(a =>
         `${(a.company || '').toLowerCase()}::${(a.role || '').toLowerCase()}`
@@ -964,7 +1055,7 @@ const commands = {
   },
 
   'set-profile'(dir, args) {
-    const updates = JSON.parse(args.json);
+    const updates = parseJsonArg(args.json, 'json', { expect: 'object' });
     const doc = readProfile(dir);
 
     // Shallow merge at top level; for objects (evidence, preferences), merge one level deep
@@ -985,8 +1076,11 @@ const commands = {
   },
 
   'set-archetypes'(dir, args) {
-    const input = JSON.parse(args.json);
-    const doc = { role_types: input.role_types || input };
+    const input = parseJsonArg(args.json, 'json', { expect: 'object' });
+    if (!Array.isArray(input.role_types)) {
+      throw new Error('set-archetypes --json requires { "role_types": [...] }');
+    }
+    const doc = { role_types: input.role_types };
     writeArchetypes(dir, doc);
     return doc;
   },
@@ -996,7 +1090,7 @@ const commands = {
   },
 
   'set-filters'(dir, args) {
-    const updates = JSON.parse(args.json);
+    const updates = parseJsonArg(args.json, 'json', { expect: 'object' });
     const doc = readFilters(dir);
 
     // Replace each provided key wholesale
@@ -1022,7 +1116,7 @@ const commands = {
     let items = doc[list] || [];
 
     if (args.add) {
-      const toAdd = JSON.parse(args.add);
+      const toAdd = parseJsonArg(args.add, 'add', { expect: 'array' });
       const existing = new Set(items.map(s => s.toLowerCase()));
       for (const item of toAdd) {
         if (!existing.has(item.toLowerCase())) {
@@ -1033,7 +1127,7 @@ const commands = {
     }
 
     if (args.remove) {
-      const toRemove = new Set(JSON.parse(args.remove).map(s => s.toLowerCase()));
+      const toRemove = new Set(parseJsonArg(args.remove, 'remove', { expect: 'array' }).map(s => s.toLowerCase()));
       items = items.filter(s => !toRemove.has(s.toLowerCase()));
     }
 
@@ -1132,7 +1226,25 @@ const commands = {
       },
     };
 
-    if (file === 'all') return schemas;
+    // CLI-layer annotations — not persisted to yaml, only present on
+    // command return values. Documents where nested-write commands land
+    // their inputs on disk so agents don't have to guess.
+    const command_outputs = {
+      decline: {
+        returns: 'bare app record + top-level stored_at annotation',
+        stored_at: { reason: 'decision.reason', declined_date: 'dates.declined' },
+      },
+      stage: {
+        returns: 'bare app record + top-level stored_at annotation',
+        stored_at: { stage: 'stage', stage_date: 'dates.<resolved-stage>' },
+      },
+      'batch-decline': {
+        returns: '{ declined, total, results, stored_at? } — stored_at is present only when declined > 0',
+        stored_at: { reason: 'decision.reason', declined_date: 'dates.declined' },
+      },
+    };
+
+    if (file === 'all') return { ...schemas, command_outputs };
     if (!schemas[file]) throw new Error(`Unknown file: "${file}". Valid: ${Object.keys(schemas).join(', ')}`);
     return schemas[file];
   },
