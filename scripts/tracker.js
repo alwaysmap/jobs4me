@@ -831,14 +831,16 @@ const commands = {
     const doc = readTracker(dir);
     const app = declineEntry(doc, args.id, args.reason || '');
     writeTracker(dir, doc);
-    return app;
+    return { ...app, stored_at: { reason: 'decision.reason', declined_date: 'dates.declined' } };
   },
 
   stage(dir, args) {
     const doc = readTracker(dir);
     const app = stageEntry(doc, args.id, args.stage);
     writeTracker(dir, doc);
-    return app;
+    // stageEntry writes the resolved stage name back to app.stage; read it
+    // post-call to build the stored_at path without re-applying STAGE_ALIASES.
+    return { ...app, stored_at: { stage: 'stage', stage_date: `dates.${app.stage}` } };
   },
 
   count(dir) {
@@ -955,7 +957,12 @@ const commands = {
     });
 
     writeTracker(dir, doc);
-    return { declined: results.filter(r => r.ok).length, total: ids.length, results };
+    return {
+      declined: results.filter(r => r.ok).length,
+      total: ids.length,
+      stored_at: { reason: 'decision.reason', declined_date: 'dates.declined' },
+      results,
+    };
   },
 
   'filter-candidates'(dir, args) {

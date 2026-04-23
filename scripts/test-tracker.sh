@@ -160,6 +160,15 @@ TESTS=(
   test_set_archetypes_missing_role_types_errors
   test_set_archetypes_role_types_wrong_type_errors
   test_no_json_parse_args_remains
+
+  # Unit 5: stored_at annotations
+  test_decline_stored_at
+  test_stage_stored_at
+  test_stage_stored_at_alias_resolution
+  test_batch_decline_stored_at_top_level
+  test_batch_decline_mixed_success_failure
+  test_stored_at_not_persisted_to_yaml
+  test_stored_at_not_rendered_to_board
 )
 
 # ── Unit 2 scenarios ───────────────────────────────────────────
@@ -536,6 +545,128 @@ test_no_json_parse_args_remains() {
   count=$(grep -c 'JSON\.parse(args\.' "$SCRIPT_DIR/tracker.js" || true)
   if [ "$count" != "0" ]; then
     fail "expected 0 JSON.parse(args.X) sites in tracker.js, found $count"
+  fi
+}
+
+# ── Unit 5 scenarios: stored_at annotations ────────────────────
+
+# Helper — capture the JSON stdout from a command that succeeds.
+# Usage: out=$(run_tracker_json <args...>)
+run_tracker_json() {
+  node "$TRACKER" "$@" 2>/dev/null
+}
+
+# Seed a single application and echo its id.
+seed_app() {
+  local ws="$1"
+  local company="${2:-Acme}"
+  local role="${3:-TPM}"
+  node "$TRACKER" add --dir "$ws" --json "{\"company\":\"$company\",\"role\":\"$role\"}" 2>/dev/null |
+    node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{const o=JSON.parse(d);process.stdout.write(o.id);})'
+}
+
+test_decline_stored_at() {
+  local ws
+  ws=$(setup_workspace)
+  local id
+  id=$(seed_app "$ws")
+  local out
+  out=$(node "$TRACKER" decline --dir "$ws" --id "$id" --reason "too junior" 2>/dev/null)
+  assert_json_field "$out" "stored_at.reason"        "decision.reason"  "decline stored_at.reason"
+  assert_json_field "$out" "stored_at.declined_date" "dates.declined"   "decline stored_at.declined_date"
+  assert_json_field "$out" "decision.reason"         "too junior"       "decline persists reason on record"
+  assert_json_field "$out" "stage"                   "declined"         "decline sets stage"
+  # No wrapper shape — id is top-level, not app.id
+  assert_json_field "$out" "id"                      "$id"              "decline returns bare record (no wrapper)"
+}
+
+test_stage_stored_at() {
+  local ws
+  ws=$(setup_workspace)
+  local id
+  id=$(seed_app "$ws")
+  local out
+  out=$(node "$TRACKER" stage --dir "$ws" --id "$id" --stage applied 2>/dev/null)
+  assert_json_field "$out" "stored_at.stage"      "stage"         "stage stored_at.stage"
+  assert_json_field "$out" "stored_at.stage_date" "dates.applied" "stage stored_at.stage_date"
+  assert_json_field "$out" "stage"                "applied"       "stage mutates record.stage"
+}
+
+test_stage_stored_at_alias_resolution() {
+  # STAGE_ALIASES maps 'possible' → 'suggested' at scripts/tracker.js.
+  # stored_at.stage_date must reflect the canonical (resolved) name, not the alias.
+  local ws
+  ws=$(setup_workspace)
+  local id
+  id=$(seed_app "$ws")
+  # First move to suggested → then maybe (both are valid transitions from suggested).
+  node "$TRACKER" stage --dir "$ws" --id "$id" --stage maybe >/dev/null 2>&1
+  local out
+  out=$(node "$TRACKER" stage --dir "$ws" --id "$id" --stage applied 2>/dev/null)
+  # stored_at.stage_date should be 'dates.applied' (the resolved canonical name),
+  # regardless of any alias a caller might pass later.
+  assert_json_field "$out" "stored_at.stage_date" "dates.applied" "stage_date reflects resolved stage name"
+}
+
+test_batch_decline_stored_at_top_level() {
+  local ws
+  ws=$(setup_workspace)
+  local id_a id_b
+  id_a=$(seed_app "$ws" "Alpha" "TPM")
+  id_b=$(seed_app "$ws" "Bravo" "PM")
+  local out
+  out=$(node "$TRACKER" batch-decline --dir "$ws" --ids "$id_a,$id_b" --reason "batch test" 2>/dev/null)
+  assert_json_field "$out" "stored_at.reason"        "decision.reason" "batch-decline top-level stored_at.reason"
+  assert_json_field "$out" "stored_at.declined_date" "dates.declined"  "batch-decline top-level stored_at.declined_date"
+  assert_json_field "$out" "declined"                "2"               "batch-decline counts successes"
+  assert_json_field "$out" "total"                   "2"               "batch-decline reports total"
+  # No per-element stored_at — path ends at results[0] without stored_at leaf.
+  assert_json_field "$out" "results.0.stored_at"     "__undefined__"   "batch-decline does not attach per-element stored_at"
+  assert_json_field "$out" "results.0.ok"            "true"            "batch-decline result[0].ok"
+}
+
+test_batch_decline_mixed_success_failure() {
+  local ws
+  ws=$(setup_workspace)
+  local id_a
+  id_a=$(seed_app "$ws" "Alpha" "TPM")
+  local out
+  # One valid id + one nonexistent id exercises the failure branch.
+  out=$(node "$TRACKER" batch-decline --dir "$ws" --ids "$id_a,ghost-id" --reason "mixed test" 2>/dev/null)
+  assert_json_field "$out" "declined"            "1"       "mixed batch-decline: one success"
+  assert_json_field "$out" "total"               "2"       "mixed batch-decline: two total"
+  # Top-level stored_at remains (at least one success occurred).
+  assert_json_field "$out" "stored_at.reason"    "decision.reason" "mixed batch: top-level stored_at survives"
+  # Successful element shape preserved.
+  assert_json_field "$out" "results.0.ok"        "true"    "mixed batch: success element ok"
+  assert_json_field "$out" "results.0.stored_at" "__undefined__" "success element has no per-element stored_at"
+  # Failure element shape preserved AND carries no stored_at (would falsely claim a write).
+  assert_json_field "$out" "results.1.ok"        "false"   "mixed batch: failure element ok=false"
+  assert_json_field "$out" "results.1.stored_at" "__undefined__" "failure element has no stored_at (no write occurred)"
+}
+
+test_stored_at_not_persisted_to_yaml() {
+  local ws
+  ws=$(setup_workspace)
+  local id
+  id=$(seed_app "$ws")
+  node "$TRACKER" decline --dir "$ws" --id "$id" --reason "test" >/dev/null 2>&1
+  assert_file_not_contains "$ws/tracker.yaml" "stored_at" "stored_at not persisted to tracker.yaml"
+  # Same check via a fresh read through the CLI — `get` should not surface stored_at either.
+  local out
+  out=$(node "$TRACKER" get --dir "$ws" --id "$id" 2>/dev/null)
+  assert_json_field "$out" "stored_at" "__undefined__" "get does not surface stored_at"
+}
+
+test_stored_at_not_rendered_to_board() {
+  local ws
+  ws=$(setup_workspace)
+  local id
+  id=$(seed_app "$ws")
+  # decline auto-rebuilds the board; confirm the rendered html has no stored_at.
+  node "$TRACKER" decline --dir "$ws" --id "$id" --reason "board test" >/dev/null 2>&1
+  if [ -f "$ws/index.html" ]; then
+    assert_file_not_contains "$ws/index.html" "stored_at" "stored_at not rendered to index.html"
   fi
 }
 
