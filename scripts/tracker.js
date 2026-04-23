@@ -815,14 +815,14 @@ const commands = {
 
   add(dir, args) {
     const doc = readTracker(dir);
-    const entry = addEntry(doc, JSON.parse(args.json));
+    const entry = addEntry(doc, parseJsonArg(args.json, 'json', { expect: 'object' }));
     writeTracker(dir, doc);
     return entry;
   },
 
   update(dir, args) {
     const doc = readTracker(dir);
-    const app = updateEntry(doc, args.id, JSON.parse(args.json));
+    const app = updateEntry(doc, args.id, parseJsonArg(args.json, 'json', { expect: 'object' }));
     writeTracker(dir, doc);
     return app;
   },
@@ -912,8 +912,8 @@ const commands = {
   // ── Batch & bulk ──
 
   batch(dir, args) {
-    const ops = JSON.parse(args.json);
-    if (!Array.isArray(ops) || ops.length === 0) {
+    const ops = parseJsonArg(args.json, 'json', { expect: 'array' });
+    if (ops.length === 0) {
       throw new Error('batch expects a non-empty JSON array of operations');
     }
 
@@ -959,7 +959,7 @@ const commands = {
   },
 
   'filter-candidates'(dir, args) {
-    const candidates = JSON.parse(args.json);
+    const candidates = parseJsonArg(args.json, 'json', { expect: 'array' });
     const existing = new Set(
       readTracker(dir).applications.map(a =>
         `${(a.company || '').toLowerCase()}::${(a.role || '').toLowerCase()}`
@@ -1024,7 +1024,7 @@ const commands = {
   },
 
   'set-profile'(dir, args) {
-    const updates = JSON.parse(args.json);
+    const updates = parseJsonArg(args.json, 'json', { expect: 'object' });
     const doc = readProfile(dir);
 
     // Shallow merge at top level; for objects (evidence, preferences), merge one level deep
@@ -1056,7 +1056,7 @@ const commands = {
   },
 
   'set-filters'(dir, args) {
-    const updates = JSON.parse(args.json);
+    const updates = parseJsonArg(args.json, 'json', { expect: 'object' });
     const doc = readFilters(dir);
 
     // Replace each provided key wholesale
@@ -1093,7 +1093,7 @@ const commands = {
     }
 
     if (args.remove) {
-      const toRemove = new Set(JSON.parse(args.remove).map(s => s.toLowerCase()));
+      const toRemove = new Set(parseJsonArg(args.remove, 'remove', { expect: 'array' }).map(s => s.toLowerCase()));
       items = items.filter(s => !toRemove.has(s.toLowerCase()));
     }
 

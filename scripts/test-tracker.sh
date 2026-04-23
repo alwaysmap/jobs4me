@@ -141,6 +141,18 @@ TESTS=(
   test_ufl_add_shape_mismatch_number
   test_ufl_add_shape_mismatch_null
   test_ufl_add_shape_mismatch_boolean
+
+  # Unit 3: wiring verification at remaining seven sites
+  test_wiring_add_json_shape_mismatch
+  test_wiring_update_json_shape_mismatch
+  test_wiring_batch_json_shape_mismatch
+  test_wiring_batch_length_invariant
+  test_wiring_batch_happy_path
+  test_wiring_filter_candidates_shape_mismatch
+  test_wiring_set_profile_shape_mismatch
+  test_wiring_set_filters_shape_mismatch
+  test_wiring_set_filters_empty_object_noop
+  test_wiring_ufl_remove_shape_mismatch
 )
 
 # ── Unit 2 scenarios ───────────────────────────────────────────
@@ -312,6 +324,145 @@ run_tests() {
     return 1
   fi
   return 0
+}
+
+# ── Unit 3 scenarios: wiring verification ─────────────────────
+
+test_wiring_add_json_shape_mismatch() {
+  local ws
+  ws=$(setup_workspace)
+  local stderr
+  set +e
+  stderr=$(node "$TRACKER" add --dir "$ws" --json '"not an object"' 2>&1 >/dev/null)
+  local rc=$?
+  set -e
+  assert_exit_code 1 "$rc" "add --json shape-mismatch exit"
+  assert_contains "$stderr" "--json" "add wiring names flag"
+  assert_contains "$stderr" "got string" "add wiring reports actual type"
+}
+
+test_wiring_update_json_shape_mismatch() {
+  local ws
+  ws=$(setup_workspace)
+  # Seed a record so update has something to target; capture id from add's stdout.
+  local id
+  id=$(node "$TRACKER" add --dir "$ws" --json '{"company":"Acme","role":"TPM"}' 2>/dev/null | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{const o=JSON.parse(d);process.stdout.write(o.id);})')
+  local stderr
+  set +e
+  stderr=$(node "$TRACKER" update --dir "$ws" --id "$id" --json '"x"' 2>&1 >/dev/null)
+  local rc=$?
+  set -e
+  assert_exit_code 1 "$rc" "update --json shape-mismatch exit"
+  assert_contains "$stderr" "--json" "update wiring names flag"
+}
+
+test_wiring_batch_json_shape_mismatch() {
+  local ws
+  ws=$(setup_workspace)
+  local stderr
+  set +e
+  stderr=$(node "$TRACKER" batch --dir "$ws" --json '{"a":1}' 2>&1 >/dev/null)
+  local rc=$?
+  set -e
+  assert_exit_code 1 "$rc" "batch --json shape-mismatch exit"
+  assert_contains "$stderr" "--json" "batch wiring names flag"
+  assert_contains "$stderr" "got object" "batch wiring reports actual type (expected array)"
+}
+
+test_wiring_batch_length_invariant() {
+  local ws
+  ws=$(setup_workspace)
+  local stderr
+  set +e
+  stderr=$(node "$TRACKER" batch --dir "$ws" --json '[]' 2>&1 >/dev/null)
+  local rc=$?
+  set -e
+  assert_exit_code 1 "$rc" "batch empty-array length-check exit"
+  assert_contains "$stderr" "batch expects a non-empty JSON array of operations" "batch length invariant preserved"
+}
+
+test_wiring_batch_happy_path() {
+  local ws
+  ws=$(setup_workspace)
+  # Seed a record, then decline it via batch to exercise the happy path.
+  local id
+  id=$(node "$TRACKER" add --dir "$ws" --json '{"company":"BatchCo","role":"TPM"}' 2>/dev/null | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{const o=JSON.parse(d);process.stdout.write(o.id);})')
+  set +e
+  node "$TRACKER" batch --dir "$ws" --json "[{\"op\":\"decline\",\"id\":\"$id\"}]" >/dev/null 2>&1
+  local rc=$?
+  set -e
+  assert_exit_code 0 "$rc" "batch happy-path exit"
+}
+
+test_wiring_filter_candidates_shape_mismatch() {
+  local ws
+  ws=$(setup_workspace)
+  local stderr
+  set +e
+  stderr=$(node "$TRACKER" filter-candidates --dir "$ws" --json '"x"' 2>&1 >/dev/null)
+  local rc=$?
+  set -e
+  assert_exit_code 1 "$rc" "filter-candidates --json shape-mismatch exit"
+  assert_contains "$stderr" "--json" "filter-candidates wiring names flag"
+  assert_contains "$stderr" "got string" "filter-candidates wiring reports actual type"
+}
+
+test_wiring_set_profile_shape_mismatch() {
+  local ws
+  ws=$(setup_workspace)
+  local stderr
+  set +e
+  stderr=$(node "$TRACKER" set-profile --dir "$ws" --json '[]' 2>&1 >/dev/null)
+  local rc=$?
+  set -e
+  assert_exit_code 1 "$rc" "set-profile --json shape-mismatch exit"
+  assert_contains "$stderr" "--json" "set-profile wiring names flag"
+  assert_contains "$stderr" "got array" "set-profile wiring reports actual type (expected object)"
+}
+
+test_wiring_set_filters_shape_mismatch() {
+  local ws
+  ws=$(setup_workspace)
+  local stderr
+  set +e
+  stderr=$(node "$TRACKER" set-filters --dir "$ws" --json '[]' 2>&1 >/dev/null)
+  local rc=$?
+  set -e
+  assert_exit_code 1 "$rc" "set-filters --json shape-mismatch exit"
+  assert_contains "$stderr" "--json" "set-filters wiring names flag"
+  assert_contains "$stderr" "got array" "set-filters wiring reports actual type (expected object)"
+}
+
+test_wiring_set_filters_empty_object_noop() {
+  local ws
+  ws=$(setup_workspace)
+  # Seed filters so we can observe no-op behavior
+  node "$TRACKER" update-filter-list --dir "$ws" --list target_companies --add '["Seed"]' >/dev/null 2>&1
+  local before
+  before=$(cat "$ws/filters.yaml")
+  set +e
+  node "$TRACKER" set-filters --dir "$ws" --json '{}' >/dev/null 2>&1
+  local rc=$?
+  set -e
+  assert_exit_code 0 "$rc" "set-filters empty-object no-op exit"
+  local after
+  after=$(cat "$ws/filters.yaml")
+  if [ "$before" != "$after" ]; then
+    fail "set-filters --json '{}' should be a no-op"
+  fi
+}
+
+test_wiring_ufl_remove_shape_mismatch() {
+  local ws
+  ws=$(setup_workspace)
+  local stderr
+  set +e
+  stderr=$(node "$TRACKER" update-filter-list --dir "$ws" --list target_companies --remove '"x"' 2>&1 >/dev/null)
+  local rc=$?
+  set -e
+  assert_exit_code 1 "$rc" "update-filter-list --remove shape-mismatch exit"
+  assert_contains "$stderr" "--remove" "remove wiring names flag"
+  assert_contains "$stderr" "got string" "remove wiring reports actual type (expected array)"
 }
 
 run_tests
