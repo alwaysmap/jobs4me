@@ -153,6 +153,13 @@ TESTS=(
   test_wiring_set_filters_shape_mismatch
   test_wiring_set_filters_empty_object_noop
   test_wiring_ufl_remove_shape_mismatch
+
+  # Unit 4: set-archetypes contract tightening
+  test_set_archetypes_bare_array_errors
+  test_set_archetypes_canonical_object_happy_path
+  test_set_archetypes_missing_role_types_errors
+  test_set_archetypes_role_types_wrong_type_errors
+  test_no_json_parse_args_remains
 )
 
 # ── Unit 2 scenarios ───────────────────────────────────────────
@@ -463,6 +470,73 @@ test_wiring_ufl_remove_shape_mismatch() {
   assert_exit_code 1 "$rc" "update-filter-list --remove shape-mismatch exit"
   assert_contains "$stderr" "--remove" "remove wiring names flag"
   assert_contains "$stderr" "got string" "remove wiring reports actual type (expected array)"
+}
+
+# ── Unit 4 scenarios: set-archetypes contract tightening ───────
+
+test_set_archetypes_bare_array_errors() {
+  # Bare array is rejected at the parseJsonArg object-shape gate; the error
+  # is generic ("got array") rather than the canonical-shape message, which
+  # is reserved for objects missing role_types or with role_types of the
+  # wrong type. Either rejection is a valid contract-tightening outcome.
+  local ws
+  ws=$(setup_workspace)
+  local stderr
+  set +e
+  stderr=$(node "$TRACKER" set-archetypes --dir "$ws" --json '["TPM", "PM"]' 2>&1 >/dev/null)
+  local rc=$?
+  set -e
+  assert_exit_code 1 "$rc" "set-archetypes bare-array exit"
+  assert_contains "$stderr" "got array" "bare-array rejected at shape gate"
+  # Explicit guardrail: bare array must not fall through to the old
+  # input.role_types || input fallback path.
+  assert_not_contains "$stderr" "Archetypes validation failed" "bare-array rejected before archetype validation"
+}
+
+test_set_archetypes_canonical_object_happy_path() {
+  local ws
+  ws=$(setup_workspace)
+  # Full valid role_types entry satisfying validateArchetypes (scripts/tracker.js:429).
+  local payload='{"role_types":[{"key":"tpm","name":"TPM","titles":["Technical PM"],"keywords":["TPM"],"experience_mapping":{},"company_fit":{}}]}'
+  set +e
+  node "$TRACKER" set-archetypes --dir "$ws" --json "$payload" >/dev/null 2>&1
+  local rc=$?
+  set -e
+  assert_exit_code 0 "$rc" "set-archetypes canonical-object exit"
+  assert_file_contains "$ws/archetypes.yaml" "Technical PM" "archetypes.yaml contains role title"
+}
+
+test_set_archetypes_missing_role_types_errors() {
+  local ws
+  ws=$(setup_workspace)
+  local stderr
+  set +e
+  stderr=$(node "$TRACKER" set-archetypes --dir "$ws" --json '{}' 2>&1 >/dev/null)
+  local rc=$?
+  set -e
+  assert_exit_code 1 "$rc" "set-archetypes missing-key exit"
+  assert_contains "$stderr" 'set-archetypes --json requires { "role_types": [...] }' "missing-key canonical-shape error"
+}
+
+test_set_archetypes_role_types_wrong_type_errors() {
+  local ws
+  ws=$(setup_workspace)
+  local stderr
+  set +e
+  stderr=$(node "$TRACKER" set-archetypes --dir "$ws" --json '{"role_types": "TPM"}' 2>&1 >/dev/null)
+  local rc=$?
+  set -e
+  assert_exit_code 1 "$rc" "set-archetypes wrong-type exit"
+  assert_contains "$stderr" 'set-archetypes --json requires { "role_types": [...] }' "wrong-type canonical-shape error"
+}
+
+test_no_json_parse_args_remains() {
+  # R6: structural grep — no JSON.parse(args.X) left in tracker.js after Unit 4.
+  local count
+  count=$(grep -c 'JSON\.parse(args\.' "$SCRIPT_DIR/tracker.js" || true)
+  if [ "$count" != "0" ]; then
+    fail "expected 0 JSON.parse(args.X) sites in tracker.js, found $count"
+  fi
 }
 
 run_tests

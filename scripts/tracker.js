@@ -1045,8 +1045,11 @@ const commands = {
   },
 
   'set-archetypes'(dir, args) {
-    const input = JSON.parse(args.json);
-    const doc = { role_types: input.role_types || input };
+    const input = parseJsonArg(args.json, 'json', { expect: 'object' });
+    if (!Array.isArray(input.role_types)) {
+      throw new Error('set-archetypes --json requires { "role_types": [...] }');
+    }
+    const doc = { role_types: input.role_types };
     writeArchetypes(dir, doc);
     return doc;
   },
