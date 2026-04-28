@@ -186,6 +186,12 @@ TESTS=(
   test_batch_add_suggested_with_skip_liveness_accepted
   test_verify_posting_requires_url
   test_verify_posting_handles_unreachable_host
+
+  # Unit 8: stage-aware dedup in filter-candidates
+  test_filter_candidates_dup_returns_existing_entry
+  test_filter_candidates_resurface_for_stale_decline
+  test_filter_candidates_no_resurface_for_substantive_decline
+  test_filter_candidates_no_resurface_for_active_stage
 )
 
 # ── Unit 2 scenarios ───────────────────────────────────────────
@@ -883,6 +889,64 @@ test_verify_posting_handles_unreachable_host() {
   assert_exit_code 0 "$rc" "verify-posting on unreachable host still exits 0"
   assert_json_field "$out" "live" "false" "unreachable host yields live=false"
   assert_json_field "$out" "checks.status_2xx" "false" "unreachable host yields status_2xx=false"
+}
+
+# ── Unit 8 scenarios — stage-aware dedup ───────────────────────
+
+# A duplicate (company, role) match must surface the existing entry's
+# stage, decline_reason, and last_updated so the agent can apply the
+# dedup table in skills/search/SKILL.md without re-reading tracker.yaml.
+test_filter_candidates_dup_returns_existing_entry() {
+  local ws
+  ws=$(setup_workspace)
+  seed_app "$ws" "DupCo" "TPM" >/dev/null
+  local out
+  out=$(node "$TRACKER" filter-candidates --dir "$ws" --json '[{"company":"DupCo","role":"TPM","url":"https://example.com/d"}]' 2>/dev/null)
+  assert_json_field "$out" "filtered_detail.0.reason" "duplicate" "duplicate reason set"
+  assert_json_field "$out" "filtered_detail.0.existing_entry.stage" "suggested" "existing stage surfaced"
+  assert_json_field "$out" "filtered_detail.0.suggest_resurface" "false" "suggested-stage dup does not flag resurface"
+}
+
+# A previously declined-as-stale entry should be flagged for resurface
+# review when the same (company, role) reappears.
+test_filter_candidates_resurface_for_stale_decline() {
+  local ws
+  ws=$(setup_workspace)
+  local id
+  id=$(seed_app "$ws" "StaleCo" "TPM")
+  node "$TRACKER" decline --dir "$ws" --id "$id" --reason "Posting closed before I could apply" >/dev/null 2>&1
+  local out
+  out=$(node "$TRACKER" filter-candidates --dir "$ws" --json '[{"company":"StaleCo","role":"TPM","url":"https://example.com/r"}]' 2>/dev/null)
+  assert_json_field "$out" "filtered_detail.0.suggest_resurface" "true" "stale decline triggers resurface flag"
+  assert_json_field "$out" "filtered_detail.0.existing_entry.stage" "declined" "existing entry stage=declined"
+}
+
+# A decline for a substantive reason (travel, comp, domain) is NOT a
+# resurface — the user said no for a real reason. Surface the duplicate
+# but don't flag for re-review.
+test_filter_candidates_no_resurface_for_substantive_decline() {
+  local ws
+  ws=$(setup_workspace)
+  local id
+  id=$(seed_app "$ws" "TravelCo" "TPM")
+  node "$TRACKER" decline --dir "$ws" --id "$id" --reason "Travel exceeds 15% — out of range" >/dev/null 2>&1
+  local out
+  out=$(node "$TRACKER" filter-candidates --dir "$ws" --json '[{"company":"TravelCo","role":"TPM","url":"https://example.com/t"}]' 2>/dev/null)
+  assert_json_field "$out" "filtered_detail.0.suggest_resurface" "false" "substantive decline does not trigger resurface"
+}
+
+# A duplicate against any active-pipeline stage (suggested, applied,
+# interviewing) is just a no-op skip.
+test_filter_candidates_no_resurface_for_active_stage() {
+  local ws
+  ws=$(setup_workspace)
+  local id
+  id=$(seed_app "$ws" "ActiveCo" "TPM")
+  node "$TRACKER" stage --dir "$ws" --id "$id" --stage applied >/dev/null 2>&1
+  local out
+  out=$(node "$TRACKER" filter-candidates --dir "$ws" --json '[{"company":"ActiveCo","role":"TPM","url":"https://example.com/a"}]' 2>/dev/null)
+  assert_json_field "$out" "filtered_detail.0.suggest_resurface" "false" "active stage does not trigger resurface"
+  assert_json_field "$out" "filtered_detail.0.existing_entry.stage" "applied" "active stage surfaced"
 }
 
 run_tests

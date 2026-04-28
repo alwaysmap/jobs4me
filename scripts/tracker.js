@@ -1139,11 +1139,20 @@ const commands = {
 
   'filter-candidates'(dir, args) {
     const candidates = parseJsonArg(args.json, 'json', { expect: 'array' });
-    const existing = new Set(
-      readTracker(dir).applications.map(a =>
-        `${(a.company || '').toLowerCase()}::${(a.role || '').toLowerCase()}`
-      )
-    );
+
+    // Build a stage-aware lookup. The agent uses existing_entry to apply
+    // the dedup table in skills/search/SKILL.md (skip silently / flag for
+    // resurface / call out in "Already in pipeline").
+    const existingMap = new Map();
+    for (const a of readTracker(dir).applications) {
+      const key = `${(a.company || '').toLowerCase()}::${(a.role || '').toLowerCase()}`;
+      existingMap.set(key, {
+        id: a.id,
+        stage: a.stage,
+        decline_reason: (a.decision && a.decision.reason) || null,
+        last_updated: a.last_updated || null,
+      });
+    }
 
     const filters = readFilters(dir);
     const skipTerms = (filters.skip_companies || filters.skip || []).map(s =>
@@ -1153,6 +1162,11 @@ const commands = {
       (typeof p === 'string' ? p : p.pattern || '').toLowerCase()
     ).filter(Boolean);
 
+    // Decline-reason regex for the resurface heuristic. Matches the canonical
+    // "Posting is stale or closed" pattern and its variants. Stays in sync
+    // with the seeded pattern in skills/search/references/decline-learning.md.
+    const RESURFACE_RE = /stale|closed|posting|removed|filled|no longer hiring/i;
+
     const passed = [];
     const filtered = [];
 
@@ -1160,8 +1174,17 @@ const commands = {
       const companyLower = (c.company || '').toLowerCase();
       const key = `${companyLower}::${(c.role || '').toLowerCase()}`;
 
-      if (existing.has(key)) {
-        filtered.push({ ...c, reason: 'duplicate' });
+      if (existingMap.has(key)) {
+        const existing = existingMap.get(key);
+        const suggestResurface =
+          (existing.stage === 'declined' || existing.stage === 'closed') &&
+          RESURFACE_RE.test(existing.decline_reason || '');
+        filtered.push({
+          ...c,
+          reason: 'duplicate',
+          existing_entry: existing,
+          suggest_resurface: suggestResurface,
+        });
       } else if (skipTerms.some(s => companyLower.includes(s))) {
         filtered.push({ ...c, reason: 'skip_list' });
       } else {
