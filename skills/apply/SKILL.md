@@ -61,9 +61,13 @@ Generate application materials — a cover letter and optionally a tailored resu
     >
     > {Show the full cover letter text here}
 
-    Use `present_files` to share the created files and `Kanban/index.html` with the user.
+    Use `present_files` to share the created markdown files and `Kanban/index.html` with the user.
 
     Iterate if they give feedback — update the file and show the revised version inline.
+
+12. **Render PDFs.** Once the user has approved the markdown drafts, render `cover-letter.md` and (if requested) `resume.md` to PDF using the canonical pandoc setup. See `references/pdf-rendering.md` for the full command, fonts, and rationale.
+
+    After rendering, use `present_files` to share the PDFs alongside the markdown sources. The PDFs are what the user actually submits — markdown is the editable source.
 
 ## Cover Letter Format
 
@@ -76,9 +80,43 @@ The cover letter must sound like the user, not like a template. Read the user's 
 - **Simple close** — "Thanks," or "I hope to hear from you." No grandiose closing.
 - **No buzzwords** — No "synergy", "leverage", "passionate about", "excited to bring my skills". Use plain language.
 
+### Voice — patterns to cut on sight
+
+These all read as pitch / sales voice and must be removed. The closer is "state the fact, link the evidence, stop":
+
+- "caught my attention because…" / "what excites me about…" — pitch-hook framing
+- "I'd bring that playbook to…" / "I'd hit the ground running" — active selling
+- "A couple of pieces of evidence" / "let me share why I'm a fit" — casemaking preamble
+- "isn't abstract for me" / "the underlying work is the same" — performative confidence
+- "it reads like a role I'd interview for anywhere" — self-promotional
+- "The IC depth is real" / similar defensive self-promotion
+- Any closing crescendo: "I'd love the chance to…", "excited to bring…", "ready to dive in"
+
+Replace with concrete role/charter overlap. "I built this at GitHub. Details at [link]." beats "I'd bring my proven playbook to scale your TPM org."
+
+### Never fabricate inner thoughts, history, or feelings
+
+Hooks must come from facts the user provided or public evidence (resume, blog, profile.yaml, prior employers, location, public talks). Do not invent:
+
+- Emotional framing — "excited about", "long admired", "always wanted to work on X"
+- Personal history of interest — "I've watched X for years", "I've been using X since…", "I've been thinking about X"
+- Inferred opinions — "I love what you're building" (unless the user said so)
+
+If a hook needs a personal connection and you don't have one, ask the user — or write a hook that leads with concrete role/charter overlap instead.
+
 ### Structure
 
+**No "Tailored for {Company} — {Role}" subtitle, tagline, or italic header line.** The folder and filename convey it. Putting it in the document signals customization to the hiring manager and adds noise.
+
+Cover letter header: `# Cover Letter — {Company}, {Role}` (the H1 gets stripped at PDF render — see `references/pdf-rendering.md`) → blank line → date → blank line → salutation. No subtitle.
+
 ```
+# Cover Letter — {Company}, {Role}
+
+{Date}
+
+Dear {hiring contact, or "Hiring team" if unknown},
+
 {Personal hook — 1-2 sentences connecting to the company/role}
 
 {Core pitch — 2-3 sentences on why the user is a strong fit, with inline links to evidence}
@@ -101,7 +139,7 @@ Only generate if the user asks. The tailored resume is NOT a rewrite — it's th
 - **Highlight** specific achievements that map to the JD's requirements
 - **Keep everything truthful** — never invent experience, inflate numbers, or claim skills the user doesn't have
 
-Save as markdown. The user can convert to their preferred format.
+**No "Tailored for {Company} — {Role}" subtitle, tagline, or italic header line.** Same rule as the cover letter: the folder and filename carry that context. Resume header structure: `# {Candidate Name}` → blank line → contact line → `## Summary`. Nothing in between.
 
 ## Iteration
 
@@ -131,3 +169,7 @@ Read evidence in this order of preference:
 4. `archetypes.yaml` → the matched role type's `experience_mapping`
 5. Company Overview (`{company_dir}/overview.md`) for company context
 6. JD (`{role_dir}/jd.md`) for role requirements
+
+## Additional Resources
+
+- **`references/pdf-rendering.md`** — canonical pandoc / xelatex setup for converting markdown drafts to submission-ready PDFs (Step 12)
