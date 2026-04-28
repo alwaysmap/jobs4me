@@ -16,7 +16,7 @@ user_summary: >
 
 **Shell setup:** Always `export JFM_DIR='<workspace path>'` (single quotes) before running tracker commands. The script refuses to operate if it can't resolve a real workspace.
 
-**Read `search/references/routing.md` before processing any user message** — it defines how to decompose compound messages and where to route each type of input.
+**Read `../search/references/routing.md` before processing any user message** — it defines how to decompose compound messages and where to route each type of input.
 
 Update the stage or status of a tracked role, including declining roles.
 
@@ -123,7 +123,7 @@ Users often mention configuration changes while updating a role: "decline {Compa
 
 Handle the pipeline action first, then address each secondary intent separately. Confirm each change individually. Don't silently drop any part of the user's message.
 
-See `search/references/routing.md` for the full routing decision tree.
+See `../search/references/routing.md` for the full routing decision tree.
 
 ## No arguments — show active roles
 

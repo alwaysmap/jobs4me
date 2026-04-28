@@ -17,7 +17,7 @@ user_summary: >
 
 **Shell setup:** The tracker script auto-detects the workspace directory. If needed, set `JFM_DIR` environment variable or use `--dir`.
 
-**Read `search/references/routing.md` before processing any user message** — it defines how to decompose compound messages and where to route each type of input.
+**Read `../search/references/routing.md` before processing any user message** — it defines how to decompose compound messages and where to route each type of input.
 
 Walk the user through their tracked roles one at a time, grouped by what needs attention. This is a conversational triage — present a role, get a quick decision, apply it, kick off background work, move on.
 
@@ -109,7 +109,7 @@ Keep it tight — the user should be able to make a snap decision from this. Don
 After each decision:
 
 1. Apply the change via tracker.js — let the board auto-rebuild on each mutation (it takes ~1 second). This way the user can refresh `Kanban/index.html` at any point during the review and see current state.
-2. If declining, extract the reason and consider whether it should become a decline pattern (see `search/references/decline-learning.md`). Add one if the reason is generalizable and meaningfully different from existing patterns.
+2. If declining, extract the reason and consider whether it should become a decline pattern (see `../search/references/decline-learning.md`). Add one if the reason is generalizable and meaningfully different from existing patterns.
 3. **If the decision triggers background work, launch it as a sub-agent** (see Background Work below)
 4. Acknowledge briefly — one line max — then immediately present the next role
 
@@ -213,7 +213,7 @@ After the last role (or when the user says "done"):
 
 During a review session, users may mention things beyond simple yes/no/decline decisions. **During the review:** handle quick config changes inline. **After the review summary**, address any deferred items.
 
-See `search/references/routing.md` for the full routing decision tree.
+See `../search/references/routing.md` for the full routing decision tree.
 
 ## Tone
 

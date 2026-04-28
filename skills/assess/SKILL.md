@@ -15,7 +15,7 @@ user_summary: >
 
 **Shell setup:** Always `export JFM_DIR='<workspace path>'` (single quotes) before running tracker commands. The script refuses to operate if it can't resolve a real workspace.
 
-**Read `search/references/routing.md` before processing any user message** — it defines how to decompose compound messages and where to route each type of input.
+**Read `../search/references/routing.md` before processing any user message** — it defines how to decompose compound messages and where to route each type of input.
 
 Assess a specific job posting against the user's profile.
 
@@ -53,7 +53,7 @@ Assess a specific job posting against the user's profile.
      ```bash
      node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js add --json '{"company":"...","role":"...","url":"...","stage":"declined","decision":{"proceed":"no","reason":"reason text"}}'
      ```
-   - **Always run decline pattern learning** (see `search/references/decline-learning.md`):
+   - **Always run decline pattern learning** (see `../search/references/decline-learning.md`):
      check if this decline suggests a new pattern or refines an existing one. If so:
      ```bash
      node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js add-decline-pattern --pattern "Pattern description" --learned-from "Company Name"
@@ -83,8 +83,8 @@ Users may share additional context alongside a job posting: "check this role —
 - **Career evidence** → ask a follow-up, save to profile.yaml
 - **Additional URLs** (careers page, blog post, portfolio) → route appropriately
 
-Handle the assessment first, then address secondary intents. See `search/references/routing.md` for the full routing decision tree.
+Handle the assessment first, then address secondary intents. See `../search/references/routing.md` for the full routing decision tree.
 
 ## Decline Pattern Learning
 
-Any time a role is declined — whether during assessment, review, update, or any other flow — consider whether the decline reason represents a generalizable pattern. Read `search/references/decline-learning.md` for the full process. The key question: **would this reason apply to future roles too?** If yes, add or refine a decline pattern. If it's a one-off, just note it and move on.
+Any time a role is declined — whether during assessment, review, update, or any other flow — consider whether the decline reason represents a generalizable pattern. Read `../search/references/decline-learning.md` for the full process. The key question: **would this reason apply to future roles too?** If yes, add or refine a decline pattern. If it's a one-off, just note it and move on.

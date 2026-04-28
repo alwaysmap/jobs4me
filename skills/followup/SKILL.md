@@ -20,7 +20,7 @@ user_summary: >
 
 **Shell setup:** Always `export JFM_DIR='<workspace path>'` (single quotes) before running tracker commands. The script refuses to operate if it can't resolve a real workspace.
 
-**Read `search/references/routing.md` before processing any user message** — it defines how to decompose compound messages and where to route each type of input.
+**Read `../search/references/routing.md` before processing any user message** — it defines how to decompose compound messages and where to route each type of input.
 
 This skill has two modes that share context and tone but serve different jobs:
 
@@ -141,4 +141,4 @@ Analytical, evidence-backed, brisk. No filler, no encouragement, no cheerleading
 
 ## Compound requests during a run
 
-Handle the pipeline action first, then address each secondary intent separately. See `search/references/routing.md` for the full routing decision tree.
+Handle the pipeline action first, then address each secondary intent separately. See `../search/references/routing.md` for the full routing decision tree.

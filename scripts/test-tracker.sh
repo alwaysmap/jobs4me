@@ -16,6 +16,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TRACKER="${SCRIPT_DIR}/tracker.js"
+VALIDATE_SKILL_REFS="${SCRIPT_DIR}/validate-skill-refs.js"
 
 # Track every temp workspace created so trap can clean them up on exit.
 WORKSPACES=()
@@ -202,6 +203,9 @@ TESTS=(
   test_sweep_detects_orphaned_role_dir
   test_sweep_detects_missing_jd_for_applied
   test_sweep_dry_run_does_not_delete
+
+  # Unit 10: skill reference integrity (progressive disclosure)
+  test_skill_refs_all_resolve
 )
 
 # ── Unit 2 scenarios ───────────────────────────────────────────
@@ -1056,6 +1060,22 @@ test_sweep_detects_missing_jd_for_applied() {
   set -e
   assert_contains "$out" "missing_jd" "missing jd surfaced for applied entry"
   assert_contains "$out" "JDless" "missing jd finding tied to the company"
+}
+
+# ── Unit 10 — skill reference integrity ────────────────────────
+
+# Every references/X.md path mentioned in any skills/*/SKILL.md must
+# resolve to a real file on disk. Catches dangling progressive-disclosure
+# pointers introduced by future restructures.
+test_skill_refs_all_resolve() {
+  local stderr
+  set +e
+  stderr=$(node "$VALIDATE_SKILL_REFS" --quiet 2>&1 >/dev/null)
+  local rc=$?
+  set -e
+  if [ "$rc" != "0" ]; then
+    fail "skill references validator failed: $stderr"
+  fi
 }
 
 # Dry-run never deletes — even when the finding is auto-fixable.

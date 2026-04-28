@@ -14,7 +14,7 @@ user_summary: >
 
 # Tweak Configuration
 
-**Read `search/references/routing.md` before processing any user message** — it defines where each type of input should be routed and the rule against saving job search data to Claude memory.
+**Read `../search/references/routing.md` before processing any user message** — it defines where each type of input should be routed and the rule against saving job search data to Claude memory.
 
 Help the user make targeted changes to their setup without re-running the full onboarding. This is the "come back and adjust anything" command.
 
