@@ -21,6 +21,20 @@ Either way, the agent will show you where you are at every step ("Step 2 of 5: C
 | `archetypes.yaml` | The types of roles you're targeting |
 | `filters.yaml` | Sources, target companies, skip list |
 
+### Define your writing voice (optional but recommended)
+
+Once setup completes, open `profile.yaml` and add a `writing_voice` field with a few lines describing how cover letters from you should sound. Examples:
+
+```yaml
+writing_voice: |
+  Direct, evidence-linked, no buzzwords. Short sentences.
+  Em dashes have no surrounding spaces — word—word, never word — word.
+  Never invent emotional framing or personal history I didn't tell you about.
+  Lead with concrete role/charter overlap, not casemaking preamble.
+```
+
+The apply skill reads this on every cover letter draft, so anything you find yourself correcting more than once should land here. You can also add it later via `/jfm:tweak`.
+
 ## First search
 
 After setup, the agent offers to run your first search. Say yes.
