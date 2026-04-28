@@ -192,6 +192,16 @@ TESTS=(
   test_filter_candidates_resurface_for_stale_decline
   test_filter_candidates_no_resurface_for_substantive_decline
   test_filter_candidates_no_resurface_for_active_stage
+
+  # Unit 9: filesystem sweep
+  test_sweep_clean_workspace_no_findings
+  test_sweep_invalid_scope_errors
+  test_sweep_detects_drive_conflict
+  test_sweep_apply_deletes_drive_conflict_with_original
+  test_sweep_apply_exit_code_1_when_fixes_applied
+  test_sweep_detects_orphaned_role_dir
+  test_sweep_detects_missing_jd_for_applied
+  test_sweep_dry_run_does_not_delete
 )
 
 # ── Unit 2 scenarios ───────────────────────────────────────────
@@ -947,6 +957,120 @@ test_filter_candidates_no_resurface_for_active_stage() {
   out=$(node "$TRACKER" filter-candidates --dir "$ws" --json '[{"company":"ActiveCo","role":"TPM","url":"https://example.com/a"}]' 2>/dev/null)
   assert_json_field "$out" "filtered_detail.0.suggest_resurface" "false" "active stage does not trigger resurface"
   assert_json_field "$out" "filtered_detail.0.existing_entry.stage" "applied" "active stage surfaced"
+}
+
+# ── Unit 9 scenarios — filesystem sweep ────────────────────────
+
+test_sweep_clean_workspace_no_findings() {
+  local ws
+  ws=$(setup_workspace)
+  local out
+  set +e
+  out=$(node "$TRACKER" sweep --dir "$ws" 2>/dev/null)
+  local rc=$?
+  set -e
+  assert_exit_code 0 "$rc" "clean sweep exits 0"
+  assert_json_field "$out" "mode" "dry-run" "default mode is dry-run"
+  assert_json_field "$out" "summary.errors" "0" "clean workspace has no errors"
+}
+
+test_sweep_invalid_scope_errors() {
+  local ws
+  ws=$(setup_workspace)
+  local stderr
+  set +e
+  stderr=$(node "$TRACKER" sweep --dir "$ws" --scope "bogus" 2>&1 >/dev/null)
+  local rc=$?
+  set -e
+  assert_exit_code 1 "$rc" "invalid scope exits non-zero"
+  assert_contains "$stderr" "Invalid --scope" "error names the bad scope"
+}
+
+test_sweep_detects_drive_conflict() {
+  local ws
+  ws=$(setup_workspace)
+  mkdir -p "$ws/companies/Acme/2026-04-01-tpm"
+  printf 'real content' > "$ws/companies/Acme/2026-04-01-tpm/jd.md"
+  printf 'conflict' > "$ws/companies/Acme/2026-04-01-tpm/jd (Conflicted copy 2026-04-22).md"
+  local out
+  set +e
+  out=$(node "$TRACKER" sweep --dir "$ws" --scope drive 2>/dev/null)
+  set -e
+  assert_json_field "$out" "findings.0.type" "drive_conflict" "drive_conflict detected"
+  assert_json_field "$out" "findings.0.auto_fixable" "true" "auto-fixable when original sibling exists"
+}
+
+test_sweep_apply_deletes_drive_conflict_with_original() {
+  local ws
+  ws=$(setup_workspace)
+  mkdir -p "$ws/companies/Acme/2026-04-01-tpm"
+  printf 'real' > "$ws/companies/Acme/2026-04-01-tpm/jd.md"
+  printf 'conflict' > "$ws/companies/Acme/2026-04-01-tpm/jd (Conflicted copy 2026-04-22).md"
+  set +e
+  node "$TRACKER" sweep --dir "$ws" --scope drive --apply >/dev/null 2>&1
+  set -e
+  if [ -f "$ws/companies/Acme/2026-04-01-tpm/jd (Conflicted copy 2026-04-22).md" ]; then
+    fail "drive_conflict file should have been deleted by --apply"
+  fi
+  if [ ! -f "$ws/companies/Acme/2026-04-01-tpm/jd.md" ]; then
+    fail "original sibling must not be touched"
+  fi
+}
+
+test_sweep_apply_exit_code_1_when_fixes_applied() {
+  local ws
+  ws=$(setup_workspace)
+  mkdir -p "$ws/companies/Acme/2026-04-01-tpm"
+  printf 'real' > "$ws/companies/Acme/2026-04-01-tpm/jd.md"
+  printf 'conflict' > "$ws/companies/Acme/2026-04-01-tpm/jd (Conflicted copy 2026-04-22).md"
+  set +e
+  node "$TRACKER" sweep --dir "$ws" --scope drive --apply >/dev/null 2>&1
+  local rc=$?
+  set -e
+  assert_exit_code 1 "$rc" "successful --apply with fixes exits 1"
+}
+
+test_sweep_detects_orphaned_role_dir() {
+  local ws
+  ws=$(setup_workspace)
+  # Create a role dir with no corresponding tracker entry
+  mkdir -p "$ws/companies/OrphanCo/2026-04-01-stale-tpm"
+  printf 'orphan content' > "$ws/companies/OrphanCo/2026-04-01-stale-tpm/jd.md"
+  local out
+  set +e
+  out=$(node "$TRACKER" sweep --dir "$ws" --scope orphans 2>/dev/null)
+  set -e
+  assert_contains "$out" "orphaned_role_dir" "orphaned role dir detected"
+  assert_contains "$out" "OrphanCo" "orphan path includes the company"
+}
+
+test_sweep_detects_missing_jd_for_applied() {
+  local ws
+  ws=$(setup_workspace)
+  local id
+  id=$(seed_app "$ws" "JDless" "TPM")
+  node "$TRACKER" stage --dir "$ws" --id "$id" --stage applied >/dev/null 2>&1
+  local out
+  set +e
+  out=$(node "$TRACKER" sweep --dir "$ws" --scope tracker-files 2>/dev/null)
+  set -e
+  assert_contains "$out" "missing_jd" "missing jd surfaced for applied entry"
+  assert_contains "$out" "JDless" "missing jd finding tied to the company"
+}
+
+# Dry-run never deletes — even when the finding is auto-fixable.
+test_sweep_dry_run_does_not_delete() {
+  local ws
+  ws=$(setup_workspace)
+  mkdir -p "$ws/companies/Acme/2026-04-01-tpm"
+  printf 'real' > "$ws/companies/Acme/2026-04-01-tpm/jd.md"
+  printf 'conflict' > "$ws/companies/Acme/2026-04-01-tpm/jd (Conflicted copy 2026-04-22).md"
+  set +e
+  node "$TRACKER" sweep --dir "$ws" --scope drive >/dev/null 2>&1
+  set -e
+  if [ ! -f "$ws/companies/Acme/2026-04-01-tpm/jd (Conflicted copy 2026-04-22).md" ]; then
+    fail "dry-run must not delete"
+  fi
 }
 
 run_tests

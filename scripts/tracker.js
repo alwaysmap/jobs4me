@@ -531,6 +531,22 @@ function backup(dir, filename) {
   fs.copyFileSync(src, path.join(bDir, `${name}.${ts}${ext}`));
 }
 
+// FUSE-safe readFileSync. Google Drive's macOS FUSE layer occasionally
+// returns EDEADLK / EAGAIN / EBUSY for files that are mid-sync; cat,
+// cp, and Node's fs all hit this. Treat those as "transient empty"
+// instead of crashing the whole board build. Other errors propagate.
+function safeReadFile(filePath) {
+  try {
+    return fs.readFileSync(filePath, 'utf8');
+  } catch (err) {
+    if (err.code === 'EDEADLK' || err.code === 'EAGAIN' || err.code === 'EBUSY') {
+      console.error(`Warning: transient I/O on ${filePath} (${err.code}) — treating as empty`);
+      return '';
+    }
+    throw err;
+  }
+}
+
 function pruneBackups(dir, filename) {
   try {
     const bDir = backupsDir(dir);
@@ -745,7 +761,7 @@ function buildDocumentData(dir, apps) {
     // JD, prep, and cover letter are role-specific — key by app ID
     for (const key of ['jd', 'prep', 'cover_letter']) {
       if (docs[`has_${key}`] && fs.existsSync(docs[key])) {
-        data[`${app.id}::${key}`] = fs.readFileSync(docs[key], 'utf8');
+        data[`${app.id}::${key}`] = safeReadFile(docs[key]);
       }
     }
 
@@ -753,7 +769,7 @@ function buildDocumentData(dir, apps) {
     if (docs.has_overview && !overviewSeen.has(app.company)) {
       overviewSeen.add(app.company);
       if (fs.existsSync(docs.overview)) {
-        data[`${app.company}::overview`] = fs.readFileSync(docs.overview, 'utf8');
+        data[`${app.company}::overview`] = safeReadFile(docs.overview);
       }
     }
   }
@@ -773,7 +789,7 @@ function buildBriefsData(dir, limit = 15) {
     .slice(0, limit)
     .map(f => ({
       date: f.replace(/\.md$/, ''),
-      content: fs.readFileSync(path.join(briefsPath, f), 'utf8'),
+      content: safeReadFile(path.join(briefsPath, f)),
     }));
 }
 
@@ -947,6 +963,410 @@ async function verifyPosting(url, { roleTitle, timeoutMs } = {}) {
 }
 
 // ────────────────────────────────────────────────────────────────
+// Filesystem sweep
+//
+// Cross-checks tracker.yaml against the actual workspace filesystem
+// and surfaces inconsistencies as structured findings. Auto-fixes
+// the safe-to-automate categories (Drive conflict files, stale temp
+// files, backups beyond retention, misplaced files with unambiguous
+// targets). Everything that needs judgment goes back to the agent
+// via the _internal sweep skill.
+// ────────────────────────────────────────────────────────────────
+
+const SWEEP_SCOPES = ['all', 'orphans', 'drive', 'temp', 'tracker-files', 'backups'];
+const STALE_TEMP_AGE_MS = 24 * 60 * 60 * 1000;
+const BACKUP_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+const DRIVE_CONFLICT_RES = [
+  /\(Conflicted copy [^)]+\)/i,
+  / \(\d+\)\.[A-Za-z0-9]+$/,
+  /\.docx#$/,
+  /^\.~lock\./,
+];
+
+const MISPLACED_NAME_PATTERNS = [
+  /Job Description/i,
+  /\bJD\b/,
+  /cover-letter/i,
+  /\bresume\b/i,
+  /\boverview\b/i,
+];
+
+const ACTIVE_PIPELINE_STAGES = new Set([
+  'suggested', 'maybe', 'applied', 'interviewing', 'offered',
+]);
+
+// Normalize a string for fuzzy company-name matching: strip punctuation,
+// collapse whitespace, lowercase. "Posit, PBC" and "Posit PBC" both
+// become "posit pbc".
+function normalizeCompanyName(s) {
+  return String(s || '')
+    .replace(/[^\w\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+function fileMtimeSafe(p) {
+  try { return fs.statSync(p).mtimeMs; } catch { return null; }
+}
+
+function isMatchingScope(scope, target) {
+  if (scope === 'all') return true;
+  return scope.split(',').map(s => s.trim()).includes(target);
+}
+
+function findMissingRoleDirs(dir, apps) {
+  const findings = [];
+  for (const app of apps) {
+    if (TERMINAL_STAGES.has(app.stage)) continue;
+    const rd = roleDirPath(dir, app);
+    if (!fs.existsSync(rd)) {
+      findings.push({
+        type: 'missing_role_dir',
+        severity: 'error',
+        app_id: app.id,
+        expected_path: rd,
+        auto_fixable: false,
+        remediation: 'Recreate the role directory; any documents that lived there are lost.',
+      });
+    }
+  }
+  return findings;
+}
+
+function findOrphanedRoleDirs(dir, apps) {
+  const findings = [];
+  const companiesDir = path.join(dir, 'companies');
+  if (!fs.existsSync(companiesDir)) return findings;
+
+  const knownRoleDirs = new Set();
+  for (const app of apps) {
+    knownRoleDirs.add(roleDirPath(dir, app));
+  }
+
+  for (const company of fs.readdirSync(companiesDir, { withFileTypes: true })) {
+    if (!company.isDirectory()) continue;
+    if (company.name.startsWith('_')) continue; // _archived etc.
+    const cd = path.join(companiesDir, company.name);
+    for (const role of fs.readdirSync(cd, { withFileTypes: true })) {
+      if (!role.isDirectory()) continue;
+      const rd = path.join(cd, role.name);
+      if (knownRoleDirs.has(rd)) continue;
+      // Only flag dirs that look like role dirs (date-prefixed)
+      if (!/^\d{4}-\d{2}-\d{2}/.test(role.name)) continue;
+      findings.push({
+        type: 'orphaned_role_dir',
+        severity: 'warn',
+        path: rd,
+        auto_fixable: false,
+        remediation: 'Re-link to a tracker entry, archive (move to companies/_archived/), or delete after review.',
+      });
+    }
+  }
+  return findings;
+}
+
+function findMissingJDs(dir, apps) {
+  const findings = [];
+  for (const app of apps) {
+    if (!ACTIVE_PIPELINE_STAGES.has(app.stage)) continue;
+    if (app.stage === 'suggested') continue; // suggested doesn't require a JD on disk
+    const docs = resolveDocPaths(dir, app);
+    if (!docs.has_jd) {
+      findings.push({
+        type: 'missing_jd',
+        severity: 'error',
+        app_id: app.id,
+        expected_path: path.join(roleDirPath(dir, app), 'jd.md'),
+        auto_fixable: false,
+        remediation: 'Re-fetch from posting URL via search/assess skill.',
+      });
+    }
+  }
+  return findings;
+}
+
+function findMissingOverviews(dir, apps) {
+  const findings = [];
+  const seen = new Set();
+  for (const app of apps) {
+    if (!ACTIVE_PIPELINE_STAGES.has(app.stage)) continue;
+    if (seen.has(app.company)) continue;
+    seen.add(app.company);
+    const docs = resolveDocPaths(dir, app);
+    if (!docs.has_overview) {
+      findings.push({
+        type: 'missing_overview',
+        severity: 'warn',
+        company: app.company,
+        expected_path: path.join(companyDirPath(dir, app.company), 'overview.md'),
+        auto_fixable: false,
+        remediation: 'Generate Company Overview via prep skill.',
+      });
+    }
+  }
+  return findings;
+}
+
+function findMisplacedFiles(dir) {
+  const findings = [];
+  let entries;
+  try { entries = fs.readdirSync(dir, { withFileTypes: true }); }
+  catch { return findings; }
+  for (const e of entries) {
+    if (!e.isFile()) continue;
+    if (!e.name.endsWith('.md')) continue;
+    if (MISPLACED_NAME_PATTERNS.some(re => re.test(e.name))) {
+      findings.push({
+        type: 'misplaced_file',
+        severity: 'warn',
+        path: path.join(dir, e.name),
+        auto_fixable: false,
+        remediation: 'Move to the appropriate company/role directory.',
+      });
+    }
+  }
+  return findings;
+}
+
+function findDriveConflicts(dir) {
+  const findings = [];
+  function walk(d) {
+    let entries;
+    try { entries = fs.readdirSync(d, { withFileTypes: true }); }
+    catch { return; }
+    for (const e of entries) {
+      if (e.name === '.git' || e.name === 'node_modules' || e.name === '.backups') continue;
+      const p = path.join(d, e.name);
+      if (e.isDirectory()) {
+        walk(p);
+        continue;
+      }
+      if (DRIVE_CONFLICT_RES.some(re => re.test(e.name))) {
+        // Auto-fixable only when we can see an "original" sibling
+        const original = e.name
+          .replace(/\s*\(Conflicted copy [^)]+\)/i, '')
+          .replace(/ \(\d+\)(\.[A-Za-z0-9]+)$/, '$1')
+          .replace(/\.docx#$/, '.docx');
+        const originalPath = path.join(d, original);
+        const hasOriginal = original !== e.name && fs.existsSync(originalPath);
+        findings.push({
+          type: 'drive_conflict',
+          severity: 'warn',
+          path: p,
+          original_path: hasOriginal ? originalPath : null,
+          auto_fixable: hasOriginal,
+          suggested_action: hasOriginal ? 'delete' : 'review',
+          remediation: hasOriginal
+            ? 'Original sibling exists — safe to delete the conflict copy.'
+            : 'No original sibling found — review content before deleting.',
+        });
+      }
+    }
+  }
+  walk(dir);
+  return findings;
+}
+
+function findStaleTempFiles() {
+  const findings = [];
+  const tmp = '/tmp';
+  let entries;
+  try { entries = fs.readdirSync(tmp, { withFileTypes: true }); }
+  catch { return findings; }
+  const cutoff = Date.now() - STALE_TEMP_AGE_MS;
+  for (const e of entries) {
+    if (!e.isFile()) continue;
+    const matches =
+      e.name.startsWith('jfm-') ||
+      /^jd-.*\.md$/.test(e.name) ||
+      e.name === 'jfm-header.tex';
+    if (!matches) continue;
+    const p = path.join(tmp, e.name);
+    const mtime = fileMtimeSafe(p);
+    if (mtime === null || mtime > cutoff) continue;
+    findings.push({
+      type: 'stale_temp',
+      severity: 'info',
+      path: p,
+      auto_fixable: true,
+      suggested_action: 'delete',
+      remediation: 'Stale temp file from a prior session; safe to remove.',
+    });
+  }
+  return findings;
+}
+
+function findBackupsBeyondRetention(dir) {
+  const findings = [];
+  const bDir = path.join(dir, '.backups');
+  if (!fs.existsSync(bDir)) return findings;
+  const cutoff = Date.now() - BACKUP_RETENTION_MS;
+  let entries;
+  try { entries = fs.readdirSync(bDir, { withFileTypes: true }); }
+  catch { return findings; }
+  for (const e of entries) {
+    if (!e.isFile()) continue;
+    const p = path.join(bDir, e.name);
+    const mtime = fileMtimeSafe(p);
+    if (mtime === null || mtime > cutoff) continue;
+    findings.push({
+      type: 'backup_beyond_retention',
+      severity: 'info',
+      path: p,
+      auto_fixable: true,
+      suggested_action: 'delete',
+      remediation: 'Backup older than 30 days; pruneBackups should have removed it.',
+    });
+  }
+  return findings;
+}
+
+function findEmptyCompanyDirs(dir) {
+  const findings = [];
+  const companiesDir = path.join(dir, 'companies');
+  if (!fs.existsSync(companiesDir)) return findings;
+  for (const e of fs.readdirSync(companiesDir, { withFileTypes: true })) {
+    if (!e.isDirectory()) continue;
+    if (e.name.startsWith('_')) continue;
+    const cd = path.join(companiesDir, e.name);
+    let contents;
+    try { contents = fs.readdirSync(cd); } catch { continue; }
+    const meaningful = contents.filter(name => name !== '.DS_Store');
+    if (meaningful.length === 0) {
+      findings.push({
+        type: 'empty_company_dir',
+        severity: 'info',
+        path: cd,
+        auto_fixable: false,
+        remediation: 'Delete after confirming no roles or overview were lost.',
+      });
+    }
+  }
+  return findings;
+}
+
+function findNameMismatches(dir, apps) {
+  const findings = [];
+  const companiesDir = path.join(dir, 'companies');
+  if (!fs.existsSync(companiesDir)) return findings;
+  const dirNames = fs.readdirSync(companiesDir, { withFileTypes: true })
+    .filter(e => e.isDirectory() && !e.name.startsWith('_'))
+    .map(e => e.name);
+
+  const seen = new Set();
+  for (const app of apps) {
+    if (!app.company || seen.has(app.company)) continue;
+    seen.add(app.company);
+    if (dirNames.includes(app.company)) continue; // exact match
+    // No exact match — look for a normalized match
+    const normalized = normalizeCompanyName(app.company);
+    const match = dirNames.find(d => normalizeCompanyName(d) === normalized && d !== app.company);
+    if (match) {
+      findings.push({
+        type: 'name_mismatch',
+        severity: 'warn',
+        company: app.company,
+        directory_name: match,
+        path: path.join(companiesDir, match),
+        auto_fixable: false,
+        remediation: `Tracker has "${app.company}" but directory is "${match}". Rename one to match.`,
+      });
+    }
+  }
+  return findings;
+}
+
+function applySweepFix(finding) {
+  try {
+    if (finding.type === 'drive_conflict' && finding.auto_fixable) {
+      fs.unlinkSync(finding.path);
+      return { ok: true };
+    }
+    if (finding.type === 'stale_temp') {
+      fs.unlinkSync(finding.path);
+      return { ok: true };
+    }
+    if (finding.type === 'backup_beyond_retention') {
+      fs.unlinkSync(finding.path);
+      return { ok: true };
+    }
+    return { ok: false, error: 'no auto-fix for this finding type' };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+}
+
+function sweepWorkspace(dir, { mode, scope }) {
+  const apps = readTracker(dir).applications;
+  const findings = [];
+
+  if (isMatchingScope(scope, 'tracker-files')) {
+    findings.push(...findMissingRoleDirs(dir, apps));
+    findings.push(...findMissingJDs(dir, apps));
+    findings.push(...findMissingOverviews(dir, apps));
+  }
+  if (isMatchingScope(scope, 'orphans')) {
+    findings.push(...findOrphanedRoleDirs(dir, apps));
+    findings.push(...findEmptyCompanyDirs(dir));
+    findings.push(...findNameMismatches(dir, apps));
+    findings.push(...findMisplacedFiles(dir));
+  }
+  if (isMatchingScope(scope, 'drive')) {
+    findings.push(...findDriveConflicts(dir));
+  }
+  if (isMatchingScope(scope, 'temp')) {
+    findings.push(...findStaleTempFiles());
+  }
+  if (isMatchingScope(scope, 'backups')) {
+    findings.push(...findBackupsBeyondRetention(dir));
+  }
+
+  let fixed = 0;
+  let errors = 0;
+  if (mode === 'apply') {
+    for (const f of findings) {
+      if (!f.auto_fixable) continue;
+      const r = applySweepFix(f);
+      if (r.ok) {
+        fixed++;
+        f.fixed = true;
+      } else {
+        errors++;
+        f.fix_error = r.error;
+      }
+    }
+  }
+
+  const summary = {
+    errors: findings.filter(f => f.severity === 'error').length,
+    warnings: findings.filter(f => f.severity === 'warn').length,
+    info: findings.filter(f => f.severity === 'info').length,
+    auto_fixable: findings.filter(f => f.auto_fixable).length,
+  };
+  if (mode === 'apply') {
+    summary.fixed = fixed;
+    summary.fix_errors = errors;
+  }
+
+  // Exit code: 0 for dry-run; 1 if --apply changed something cleanly;
+  // 2 for partial failure under --apply.
+  let exitCode = 0;
+  if (mode === 'apply') {
+    if (errors > 0) exitCode = 2;
+    else if (fixed > 0) exitCode = 1;
+  }
+
+  return {
+    scope,
+    mode,
+    findings,
+    summary,
+    _exit_code: exitCode,
+  };
+}
+
+// ────────────────────────────────────────────────────────────────
 // Command implementations
 //
 // Each returns a result object. None call process.exit — that's
@@ -973,6 +1393,20 @@ const commands = {
     const entry = addEntry(doc, entryRaw, opts);
     writeTracker(dir, doc);
     return entry;
+  },
+
+  sweep(dir, args) {
+    const mode = args.apply ? 'apply' : 'dry-run';
+    const scope = args.scope || 'all';
+    const valid = SWEEP_SCOPES.concat(scope.split(',').map(s => s.trim()));
+    // Either a known scope or a comma-separated list of known sub-scopes
+    const parts = scope.split(',').map(s => s.trim());
+    for (const p of parts) {
+      if (!SWEEP_SCOPES.includes(p)) {
+        throw new Error(`Invalid --scope "${p}". Valid: ${SWEEP_SCOPES.join(', ')} (or a comma-separated list).`);
+      }
+    }
+    return sweepWorkspace(dir, { mode, scope });
   },
 
   async 'verify-posting'(_dir, args) {
@@ -1514,6 +1948,7 @@ const commands = {
         'Config':       ['get-profile', 'set-profile', 'get-archetypes', 'set-archetypes', 'get-filters', 'set-filters', 'update-filter-list', 'update-source'],
         'Files':        ['save-jd', 'migrate', 'paths', 'needs-research'],
         'Liveness':     ['verify-posting'],
+        'Sweep':        ['sweep'],
         'Board':        ['board-json', 'build-board', 'list-briefs'],
         'Query':        ['count', 'find'],
         'Housekeeping': ['init', 'validate', 'add-decline-pattern', 'schema', 'help'],
@@ -1617,6 +2052,14 @@ async function main() {
     if (result && typeof result.then === 'function') {
       result = await result;
     }
+    // Commands may request a specific exit code via _exit_code on the
+    // returned object — used by `sweep` to signal "applied fixes" (1)
+    // vs "partial failure" (2). Stripped before printing.
+    let customExit;
+    if (result && typeof result === 'object' && '_exit_code' in result) {
+      customExit = result._exit_code;
+      delete result._exit_code;
+    }
     console.log(JSON.stringify(result, null, 2));
 
     // Auto-rebuild board after mutations (pass --no-board to skip)
@@ -1626,6 +2069,10 @@ async function main() {
       } catch (err) {
         console.error(`Board rebuild warning: ${err.message}`);
       }
+    }
+
+    if (customExit !== undefined && customExit !== 0) {
+      process.exit(customExit);
     }
   } catch (err) {
     console.error(`Error: ${err.message}`);
