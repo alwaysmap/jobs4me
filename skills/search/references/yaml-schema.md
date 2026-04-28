@@ -43,12 +43,22 @@ preferences:                           # REQUIRED section
       - "Company Name"
     industries:                       # array of industry types to skip
       - "industry"
+
+writing_voice: |                       # optional - block scalar
+  Free-form notes describing the user's voice for cover letters and other
+  generated prose. Read by the apply skill before drafting. Examples:
+  "Direct, evidence-linked, no buzzwords. Short sentences. Em dashes have
+  no surrounding spaces. Never invent emotional framing or personal
+  history I didn't tell you about."
 ```
 
 ### Notes
 - `case_studies[].tags` are lowercase tags used for matching, not display
 - `evidence_complete` drives the "/tweak to add more" prompt
 - `hard_nos.companies` is the profile-level skip list (also in filters.yaml)
+- `writing_voice` is the durable place for cover-letter voice rules — anything
+  the user finds themselves correcting more than once should land here so the
+  apply skill picks it up automatically on every draft.
 
 ---
 

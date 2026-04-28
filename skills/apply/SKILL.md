@@ -71,7 +71,9 @@ Generate application materials — a cover letter and optionally a tailored resu
 
 ## Cover Letter Format
 
-The cover letter must sound like the user, not like a template. Read the user's writing voice notes in `profile.yaml` if available, and follow these principles:
+The cover letter must sound like the user, not like a template. **Read `profile.yaml` → `writing_voice`** (a free-form block scalar of voice rules and preferences) before drafting; apply it on top of the principles below. The user maintains that field as their durable voice memory — anything they've corrected more than once should be there.
+
+Then follow these principles:
 
 - **Short** — 150-250 words. No padding, no filler.
 - **Personal hook** — Open with a specific connection to the company or role, not "I'm writing to apply for..." Something concrete: a product the user has used, a person they know there, a problem they've solved that maps directly.
@@ -171,12 +173,13 @@ After materials are ready and the role is in `applied` stage:
 
 Read evidence in this order of preference:
 
-1. `profile.yaml` → `evidence.resume_url` (fetch and read)
-2. `profile.yaml` → `evidence.portfolio_urls` (check for relevant projects)
-3. `profile.yaml` → `evidence.additional_context` (user-written narrative)
-4. `archetypes.yaml` → the matched role type's `experience_mapping`
-5. Company Overview (`{company_dir}/overview.md`) for company context
-6. JD (`{role_dir}/jd.md`) for role requirements
+1. `profile.yaml` → `writing_voice` (the user's voice rules — apply on top of every draft)
+2. `profile.yaml` → `evidence.resume_url` (fetch and read)
+3. `profile.yaml` → `evidence.portfolio_urls` (check for relevant projects)
+4. `profile.yaml` → `evidence.additional_context` (user-written narrative)
+5. `archetypes.yaml` → the matched role type's `experience_mapping`
+6. Company Overview (`{company_dir}/overview.md`) for company context
+7. JD (`{role_dir}/jd.md`) for role requirements
 
 ## Additional Resources
 
