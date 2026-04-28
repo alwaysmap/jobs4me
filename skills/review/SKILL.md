@@ -200,6 +200,14 @@ After the last role (or when the user says "done"):
 1. Summarize what happened
 2. The board has been auto-rebuilt after each decision throughout the session. Tell the user to refresh `Kanban/index.html`.
 3. If there are roles in Maybe that have been there a while, offer a gentle nudge
+4. **Audit filters against the batch.** Look at every decline made in this session. If two or more share a theme (seniority, travel, domain, ownership, posting freshness, geography), check `filters.yaml` `decline_patterns`:
+   - **New pattern visible across this batch?** Add it via `tracker.js add-decline-pattern --pattern "..." --learned-from "Co1, Co2, Co3"`. Do not ask permission for additions that are obvious from the conversation — just report them.
+   - **Existing pattern needs refinement** (a new example clarifies it)? Update via `tracker.js set-filters --json '{"decline_patterns": [...]}'` (full replace).
+   - **Existing pattern was too aggressive** (filtered something the user actually wanted)? Flag it for the user to confirm before relaxing.
+
+   Report each change in one line: "Added decline pattern: X (learned from Co1, Co2)." Skip silently if no pattern emerged.
+
+   Single declines often look one-off but a batch reveals the theme — this audit is where most patterns get codified. See `../search/references/decline-learning.md` for the full taxonomy.
 
 ## Compound requests during review
 

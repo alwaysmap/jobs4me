@@ -301,14 +301,17 @@ Always check hard constraints first (comp floor, travel, location, seniority). I
 
 ## Decline Pattern Learning
 
-When the user declines a role (via `/jfm:update Company - decline reason` or in conversation):
+Run decline-pattern learning on **two cadences**:
 
-Read `references/decline-learning.md` for the full process. After each decline or batch:
+1. **Per-decline (lightweight)** — when a single decline happens via `/jfm:update`, `/jfm:assess`, or in conversation, check whether the reason matches an existing pattern (refinement) or is clearly new and generalizable (one-off addition). Don't force a pattern from a single one-off.
+2. **Per-batch (audit)** — at the end of any review session that processed multiple declines (the review skill's "End of Review" section), audit the full set against existing patterns. This is where most patterns get codified — single declines often look one-off but a batch reveals the theme.
 
-1. Compare the decline reason against existing `decline_patterns` in `filters.yaml`
-2. If a new pattern emerges, add it with the company name as `learned_from`
-3. If an existing pattern needs refinement, update it
-4. Report what was added/changed to the user
+Read `references/decline-learning.md` for the full process. For both cadences:
+
+1. Compare the decline reason(s) against existing `decline_patterns` in `filters.yaml`
+2. If a new pattern emerges, add it via `tracker.js add-decline-pattern --pattern "..." --learned-from "<companies>"`
+3. If an existing pattern needs refinement (new example clarifies it), update it via `tracker.js set-filters`
+4. Report what was added or changed in one line per item
 
 ## YAML Writing Rules
 
