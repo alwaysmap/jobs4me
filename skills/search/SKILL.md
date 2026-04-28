@@ -9,12 +9,28 @@ description: >
 user_summary: >
   Search job boards for new roles that match your profile. Filters out
   duplicates and known bad fits automatically, then suggests the best matches.
-version: 0.2.0
+version: 0.3.0
 ---
 
 # Job Search Agent
 
 Autonomous job search, fit assessment, and learning loop for a configured job seeker.
+
+## Files
+
+| File | Loaded when |
+|------|-------------|
+| `SKILL.md` (this file) | Always |
+| `references/routing.md` | First — before processing any user message. Decomposes compound input and pins the no-memory rule. |
+| `references/career-page-search.md` | Phase 1 — career page scraping, Chrome MCP fallback, ATS URL patterns. |
+| `references/liveness.md` | Phase 2 / Phase 3 boundary — **MANDATORY** before any `add` of a `suggested` entry. |
+| `references/fit-assessment.md` | Phase 2 Step B — the structured rubric for sub-agent fit assessments. |
+| `references/yaml-writing.md` | Phase 3 — write protocol, formatting rules, dedup table. |
+| `references/data-safety.md` | Phase 3 — referenced from yaml-writing.md; mandatory before any file write. |
+| `references/yaml-schema.md` | Phase 3 / debugging — full schema for tracker / profile / archetypes / filters. |
+| `references/brief-format.md` | Phase 3 end — search brief template. |
+| `references/decline-learning.md` | After any decline (per-decline or per-batch). |
+| `references/model-selection.md` | Whenever spawning sub-agents. |
 
 ## Shell Setup
 
@@ -24,7 +40,7 @@ Always `export JFM_DIR='<workspace path>'` (single quotes) before running any tr
 export JFM_DIR='<workspace path>'
 ```
 
-## Routing Rules
+## Routing
 
 **Read `references/routing.md` before processing any user message.** It defines how to decompose compound messages, where each type of user input should be routed, and the rule against saving job search data to Claude memory.
 
@@ -72,73 +88,7 @@ For each role type, search the web for matching roles:
 - General job boards with role type keywords + location
 - **If `industries` is set**: append industry terms to job board queries as context keywords (e.g., "Technical Program Manager" + "water utilities"). This surfaces roles at companies in preferred sectors that might otherwise be missed by title-only searches.
 
----
-
-#### Career page search strategy — JS-rendered boards
-
-**Critical:** Most company career pages (Greenhouse, Ashby, Workday, custom React SPAs) return only a JavaScript skeleton when fetched with WebFetch — job listings are rendered client-side and invisible to a plain HTTP fetch. Use the tiered approach below:
-
-| Tier | Method | How | When to use |
-|------|--------|-----|-------------|
-| 1 | **Chrome MCP** | `tabs_context_mcp` → `navigate` to career URL → `javascript_tool` to extract `document.body.innerText` | Best: live, fully rendered. Use whenever Chrome is connected. |
-| 2 | **Google `site:` search** | `site:job-boards.greenhouse.io/SLUG "director" remote` | Chrome not available. Google indexes rendered pages — most reliable non-browser fallback. |
-| 3 | **Aggregator mirror** | Search `builtin.com`, `himalayas.app`, or `remotive.com` | Secondary confirmation only. Flag staleness risk in brief. |
-| 4 | **Direct WebFetch** | Fetch the URL directly | Static sites, Lever pages, and some custom career pages. |
-
-**Check Chrome MCP availability at the start of every sweep:**
-
-```
-Call tabs_context_mcp (no arguments):
-  → Returns tab list: Chrome is ready — use Tier 1 for all JS-rendered career pages
-  → Returns error / "not connected": Chrome is unavailable — use Tier 2 (Google site:)
-```
-
-Never silently return 0 results from a JS-rendered career page. If a direct fetch yields only a JS skeleton (page body is < 500 chars, or contains only `<script>` tags and no visible text), immediately escalate to the next tier and note the fallback used in the search brief.
-
-**Chrome MCP extraction pattern:**
-
-```javascript
-// After navigate() to career page URL:
-const lines = document.body.innerText.split('\n').map(l => l.trim()).filter(l => l.length > 2);
-const relevant = lines.filter(l => /director|head of|VP |vice president|senior director|principal/i.test(l));
-JSON.stringify({ total_lines: lines.length, relevant_count: relevant.length, relevant: relevant.slice(0, 30) });
-```
-
-If the page has a department/category filter UI (Ashby, some Greenhouse pages), check if `relevant` is empty before assuming no matches — the listing may be paginated or filtered. Try navigating to a department-specific URL or look for a "View all" element.
-
-**Platform-to-URL patterns for Tier 2 Google `site:` searches:**
-
-| Platform | Career URL pattern | Google `site:` query |
-|----------|--------------------|----------------------|
-| Greenhouse | `job-boards.greenhouse.io/{slug}` | `site:job-boards.greenhouse.io/{slug} "director"` |
-| Ashby | `jobs.ashbyhq.com/{Company}` | `site:jobs.ashbyhq.com/{Company} "director"` |
-| Lever | `jobs.lever.co/{company}` | `site:jobs.lever.co/{company} "director"` |
-| Workday | `{company}.wd1.myworkdayjobs.com` | `site:{company}.wd1.myworkdayjobs.com "director"` |
-| Custom SPA | `company.com/careers` | `site:company.com/careers "director" "remote"` |
-
-Greenhouse slugs are typically lowercase (`gitlab`, not `GitLab`). Ashby slugs often match the company name's casing exactly.
-
-**When a career page URL returns 404 or fails to load:**
-
-1. Try alternate slug casing and alternate ATS platforms before giving up:
-   - `jobs.ashbyhq.com/{Company}` 404 → try `jobs.ashbyhq.com/{company}` (lowercase), then Google: `"{company}" careers jobs`
-   - `job-boards.greenhouse.io/{slug}` 404 → company may have switched ATS; search `site:jobs.lever.co/{slug}` or `site:jobs.ashbyhq.com/{company}`
-   - Custom career page fails → try appending `/open-roles`, `/join-us`, `/jobs`
-
-2. If a working URL is found, update filters.yaml via `set-filters` (read current state first, patch the affected source, write back):
-   ```bash
-   # Read current sources
-   node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js get-filters
-   
-   # Write back with corrected URL (replace entire sources array)
-   node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js set-filters --json '{"sources": [<updated array>]}'
-   ```
-
-3. If no working URL is found after retries, note the dead source in the search brief with a suggested action for the user (e.g., "Hinge Health careers URL returned 404 — run `/jfm:tweak` to update or remove this source").
-
-> **Note for plugin maintainers:** `update-filter-list` does not support `sources` — only company lists. A dedicated `update-source --name <n> --url <url>` command would make this cleaner. See the plugin improvement notes.
-
----
+**Read `references/career-page-search.md`** — describes the tiered approach for JS-rendered career pages (Chrome MCP, Google `site:`, aggregator, direct fetch), the Chrome availability check to run at the start of every sweep, and ATS-specific URL patterns + 404 handling. Career pages without a Chrome / Google fallback often return only a JS skeleton; the reference is the difference between finding roles and silently missing them.
 
 **Update the user after each source or batch of sources:**
 > "Searching LinkedIn for [role type]... found 12 candidates."
@@ -161,39 +111,6 @@ node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js filter-candidates --json '<candida
 
 ---
 
-### Liveness gate (mandatory before writing any role to tracker)
-
-Before any candidate is added to `tracker.yaml` as `suggested`, run a live verification against the **original posting URL** — not an aggregator mirror, not a snippet, not a cached search result. Aggregator and search-index pages lag by days to weeks; they are never sufficient for liveness.
-
-```bash
-node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js verify-posting \
-  --url "<original posting URL>" \
-  --role-title "<role title>"
-```
-
-Treat the role as live only when **all four** checks pass:
-
-1. **`status_2xx: true`** — not 404, not 410, not a redirect to a generic /careers index
-2. **`title_present: true`** — the role title (or close variant) appears in the response body
-3. **`no_closure_phrase: true`** — no closure language ("no longer accepting applications", "position filled", "this role is closed", etc.)
-4. **`is_specific_page: true`** — for Greenhouse / Lever / Ashby deep-links, the page resolved to the specific role, not the company's generic board
-
-If `live: false` or any check is ambiguous, **do not surface the role.** Log it under "Companies to Watch" in the brief with a note: "Posting may have closed — re-check next sweep."
-
-When you `add` the role to the tracker, pass the verification timestamp so the gate is enforced at write time:
-
-```bash
-node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js add \
-  --liveness-verified-at "<fetched_at from verify-posting>" \
-  --json '{"company":"...","role":"...","url":"...","stage":"suggested",...}'
-```
-
-The `add` command refuses to write a `suggested` entry without `--liveness-verified-at`. This is intentional — agent code cannot silently skip the gate.
-
-The content-extraction tiers in Step A below are *separate* from liveness. Even if a role's JD content was retrieved from an aggregator, the liveness fetch must still hit the original posting URL.
-
----
-
 ### Phase 2: Assessing candidates
 
 This is the longest phase. Use parallelism to make it faster and stream results to keep the user engaged.
@@ -211,12 +128,10 @@ Batch all direct-fetch attempts concurrently in groups of 5. Handle failures ind
 
 > "Fetching full postings... {done}/{total} ({n} via Chrome, {m} via aggregator)"
 
-**Step B — Parallel fit assessments:** Launch 3-5 **Sonnet** sub-agents in parallel. Each sub-agent receives:
+**Step B — Parallel fit assessments:** Launch 3-5 sub-agents in parallel using the model specified in `references/model-selection.md`. Each sub-agent receives:
 - The user's profile data (from `profile.yaml` and `archetypes.yaml`)
 - Its batch of candidates with fetched JD content
 - The fit assessment framework (see `references/fit-assessment.md`)
-
-Use Sonnet for fit assessments — it's ~3x faster than Opus and the structured rubric doesn't require deep reasoning.
 
 **Step C — Stream results to the user:** As each sub-agent completes, immediately tell the user what was found:
 > "Strong match: **Senior Platform Engineer at Acme Corp** — deep experience overlap, remote, comp in range."
@@ -227,13 +142,21 @@ Don't wait for all assessments to finish before displaying anything.
 
 ---
 
+### Liveness gate (mandatory before writing any role to tracker)
+
+Between Phase 2 and Phase 3, **read `references/liveness.md`**. The script enforces this gate at write time — `tracker.js add` refuses to persist a `suggested` entry without `--liveness-verified-at`. The reference covers the verify-posting command, the four checks to require, what to do on failure (Companies to Watch), and how to thread the verification timestamp into the `add` call.
+
+---
+
 ### Phase 3: Building your pipeline
 
-All assessments are done. Now persist everything and build the board.
+All assessments are done and live. Now persist everything and build the board.
+
+**Read `references/yaml-writing.md`** before any tracker mutation — it covers the write protocol, formatting rules, and the stage-aware dedup table for handling duplicate `(company, role)` matches.
 
 **Add recommended roles in one batch write** (use `--no-board` to skip intermediate rebuilds — we rebuild once after all JDs are saved):
 ```bash
-node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js batch --no-board --json '[{"op":"add","entry":{"company":"...","role":"...","url":"...","archetype":"...","stage":"suggested","agent_summary":"..."}}]'
+node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js batch --no-board --json '[{"op":"add","entry":{"company":"...","role":"...","url":"...","archetype":"...","stage":"suggested","agent_summary":"...","dates":{"liveness_verified":"<ISO ts>"}}}]'
 ```
 
 **Save JDs** for each new role (use `--no-board` on all but the last):
@@ -292,9 +215,7 @@ If they say yes, trigger the review skill. If this is their first search, the re
 
 ## Fit Assessment
 
-When assessing a single role (via the assess skill or during a sweep):
-
-Read `references/fit-assessment.md` for the full assessment framework. Output format:
+When assessing a single role (via the assess skill or during a sweep), read `references/fit-assessment.md` for the full framework. Output format:
 
 1. **Recommendation** — Strong / Moderate / Stretch / Pass, with a one-line rationale
 2. **Gaps & Concerns** — what's missing or risky
@@ -304,61 +225,9 @@ Always check hard constraints first (comp floor, travel, location, seniority). I
 
 ## Decline Pattern Learning
 
-Run decline-pattern learning on **two cadences**:
+Run on **two cadences**:
 
 1. **Per-decline (lightweight)** — when a single decline happens via `/jfm:update`, `/jfm:assess`, or in conversation, check whether the reason matches an existing pattern (refinement) or is clearly new and generalizable (one-off addition). Don't force a pattern from a single one-off.
 2. **Per-batch (audit)** — at the end of any review session that processed multiple declines (the review skill's "End of Review" section), audit the full set against existing patterns. This is where most patterns get codified — single declines often look one-off but a batch reveals the theme.
 
-Read `references/decline-learning.md` for the full process. For both cadences:
-
-1. Compare the decline reason(s) against existing `decline_patterns` in `filters.yaml`
-2. If a new pattern emerges, add it via `tracker.js add-decline-pattern --pattern "..." --learned-from "<companies>"`
-3. If an existing pattern needs refinement (new example clarifies it), update it via `tracker.js set-filters`
-4. Report what was added or changed in one line per item
-
-## YAML Writing Rules
-
-**CRITICAL: Read `references/data-safety.md` before ANY file write.**
-
-- **All tracker.yaml/filters.yaml mutations go through tracker.js** — never write YAML by hand
-- The script backs up automatically, validates after write, and rebuilds the board
-- Use block scalar (`|`) for `agent_summary` fields
-- Quote role titles with special characters: `role: "Sr. Director, TPM"`
-- Use ISO dates: `2026-03-28`
-- Em dashes inside `agent_summary` text have no surrounding spaces: `word—word`, never `word — word`
-- Never delete entries — declined roles are valuable for the learning loop
-
-### Deduplication
-
-Dedup on `(company, role)` pairs, not company alone — Toast can legitimately have a "Director, TPM" entry and a "Senior TPM" entry simultaneously. The `filter-candidates` script does the basic match and surfaces the existing entry's `stage`, `decline_reason`, and `last_updated` in `existing_entry`, plus a `suggest_resurface` boolean for the heuristic case.
-
-When a candidate's `(company, role)` matches an existing tracker entry, what the agent does next depends on that existing entry's stage and decline reason:
-
-| Existing entry | Action on new candidate |
-|---|---|
-| `suggested`, `maybe`, `applied`, `interviewing`, `offered` | Skip silently. Log under "Already in pipeline" in the brief. |
-| `declined` because posting was stale or closed (`suggest_resurface: true`) | **Re-surface as a flagged duplicate.** Do not auto-add. Brief should call this out: "Reopened? Was previously logged as closed." |
-| `declined` for substantive reason — travel, comp, domain, ownership (`suggest_resurface: false`) | Skip. Log under "Near Misses" with the original decline reason — useful signal that the company is hiring again. |
-| `closed` (posting filled/removed, `suggest_resurface: true`) | Same as the stale-decline branch — flag for review. |
-| `rejected` | Skip silently. |
-
-The `suggest_resurface` flag fires when `existing_entry.decline_reason` contains "stale", "closed", "posting", "removed", "filled", or "no longer hiring". If your decline reason for a stale role doesn't match that pattern, the script will treat it as a substantive decline — be specific in decline reasons.
-
-## Sub-Agent Model Selection
-
-| Task | Model | Why |
-|------|-------|-----|
-| Fit assessment (per batch) | **Sonnet** | Structured rubric — fast, accurate |
-| Company overview research | **Sonnet** | Web search + structured summary |
-| JD extraction from URL | **Haiku** | Simple content extraction (promote to Sonnet if aggregator/snippet fallback was needed) |
-| Interview prep generation | **Opus** | Deep experience mapping |
-| Cover letter writing | **Opus** | Voice-sensitive writing |
-| Decline pattern analysis | **Sonnet** | Pattern matching |
-
-## Additional Resources
-
-- **`references/routing.md`** — compound message decomposition and anti-memory rules (read first)
-- **`references/fit-assessment.md`** — structured assessment framework
-- **`references/brief-format.md`** — search brief template
-- **`references/decline-learning.md`** — filter updates from declines
-- **`references/data-safety.md`** — mandatory write protocol
+**Read `references/decline-learning.md`** for the full process: when to add vs refine vs flag a too-aggressive pattern, and the canonical "Posting is stale or closed" pattern.
