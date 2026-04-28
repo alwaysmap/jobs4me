@@ -80,6 +80,14 @@ The cover letter must sound like the user, not like a template. Read the user's 
 - **Simple close** — "Thanks," or "I hope to hear from you." No grandiose closing.
 - **No buzzwords** — No "synergy", "leverage", "passionate about", "excited to bring my skills". Use plain language.
 
+### Mechanical voice rules
+
+These apply to cover letters, resumes, `agent_summary` blocks, and any markdown the agent writes for the user:
+
+- **Em dashes have no surrounding spaces.** `word—word`, never `word — word`.
+- **One space after a period**, never two.
+- **Smart quotes are fine** when the editor preserves them; straight quotes (`'` `"`) are fine when it doesn't. Don't mix within a document.
+
 ### Voice — patterns to cut on sight
 
 These all read as pitch / sales voice and must be removed. The closer is "state the fact, link the evidence, stop":

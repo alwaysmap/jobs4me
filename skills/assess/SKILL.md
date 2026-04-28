@@ -32,6 +32,9 @@ Assess a specific job posting against the user's profile.
    node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js add --json '{"company":"...","role":"...","url":"...","archetype":"...","stage":"suggested","agent_summary":"..."}'
    ```
 8. Get the file paths for the new entry and save the JD:
+
+   > Always save the JD locally — Greenhouse / Lever / Ashby postings are removed once roles close, and the user needs the JD for cover letters, prep, and a record of what they applied for. Save the JD even when declining: declined JDs feed the decline-pattern learning loop.
+
    ```bash
    node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js paths --id <id>
    ```

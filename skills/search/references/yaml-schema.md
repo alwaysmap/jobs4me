@@ -126,7 +126,7 @@ applications:                          # REQUIRED - top-level key
     company: "Company Name"           # REQUIRED - exact company name
     role: "Role Title"                # REQUIRED - exact role title
     stage: suggested                  # REQUIRED - one of: suggested, maybe, applied, interviewing, offered, rejected, closed, declined
-    url: "https://..."                # optional - job posting URL
+    url: "https://..."                # optional - job posting URL (see priority below)
     archetype: "role-type-key"        # optional - matches archetypes.yaml key
     last_updated: "2026-03-30"        # REQUIRED - ISO date, auto-set
     agent_summary: |                  # optional - markdown block scalar
@@ -160,6 +160,18 @@ rejected → applied
 closed → suggested
 declined → suggested, maybe
 ```
+
+### URL priority
+
+Use the most specific stable URL available, in this order:
+
+1. **Company-hosted posting deep-link** — e.g., `posit.co/job-detail/?gh_jid=12345`. Most stable; rarely 404s while the company is still using that page.
+2. **Direct ATS deep-link with a job UUID** — e.g., `jobs.ashbyhq.com/co/<uuid>`, `job-boards.greenhouse.io/co/jobs/12345`. Specific. Will 404 once the role closes — that's acceptable for declined / closed entries since the entry is a historical record.
+3. **ATS company board root** — e.g., `jobs.ashbyhq.com/co`. At least filtered to the company.
+4. **Reliable third-party listing** — e.g., Built In, Wellfound. Use when 1–3 are unavailable.
+5. **Generic `/careers` page** — last resort. Nearly useless for navigation; the user can't get to the role from this URL.
+
+For *new* tracker entries, the liveness gate (see `search/SKILL.md`) requires a live fetch against the URL before write — never rely on cached search results. That fetch also confirms the deep-link points to the specific role rather than the company's generic board.
 
 ---
 

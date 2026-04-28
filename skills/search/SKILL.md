@@ -237,6 +237,9 @@ node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js batch --no-board --json '[{"op":"a
 ```
 
 **Save JDs** for each new role (use `--no-board` on all but the last):
+
+> Always save the JD locally — Greenhouse / Lever / Ashby postings are removed once roles close, and the user needs the JD for cover letters, prep, and a record of what they applied for. Save the JD even when declining: declined JDs feed the decline-pattern learning loop.
+
 ```bash
 node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js save-jd --id <id> --file /tmp/jd-content.md --no-board
 ```
@@ -322,6 +325,7 @@ Read `references/decline-learning.md` for the full process. For both cadences:
 - Use block scalar (`|`) for `agent_summary` fields
 - Quote role titles with special characters: `role: "Sr. Director, TPM"`
 - Use ISO dates: `2026-03-28`
+- Em dashes inside `agent_summary` text have no surrounding spaces: `word—word`, never `word — word`
 - Never delete entries — declined roles are valuable for the learning loop
 
 ### Deduplication
