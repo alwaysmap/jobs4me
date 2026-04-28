@@ -161,6 +161,39 @@ node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js filter-candidates --json '<candida
 
 ---
 
+### Liveness gate (mandatory before writing any role to tracker)
+
+Before any candidate is added to `tracker.yaml` as `suggested`, run a live verification against the **original posting URL** — not an aggregator mirror, not a snippet, not a cached search result. Aggregator and search-index pages lag by days to weeks; they are never sufficient for liveness.
+
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js verify-posting \
+  --url "<original posting URL>" \
+  --role-title "<role title>"
+```
+
+Treat the role as live only when **all four** checks pass:
+
+1. **`status_2xx: true`** — not 404, not 410, not a redirect to a generic /careers index
+2. **`title_present: true`** — the role title (or close variant) appears in the response body
+3. **`no_closure_phrase: true`** — no closure language ("no longer accepting applications", "position filled", "this role is closed", etc.)
+4. **`is_specific_page: true`** — for Greenhouse / Lever / Ashby deep-links, the page resolved to the specific role, not the company's generic board
+
+If `live: false` or any check is ambiguous, **do not surface the role.** Log it under "Companies to Watch" in the brief with a note: "Posting may have closed — re-check next sweep."
+
+When you `add` the role to the tracker, pass the verification timestamp so the gate is enforced at write time:
+
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js add \
+  --liveness-verified-at "<fetched_at from verify-posting>" \
+  --json '{"company":"...","role":"...","url":"...","stage":"suggested",...}'
+```
+
+The `add` command refuses to write a `suggested` entry without `--liveness-verified-at`. This is intentional — agent code cannot silently skip the gate.
+
+The content-extraction tiers in Step A below are *separate* from liveness. Even if a role's JD content was retrieved from an aggregator, the liveness fetch must still hit the original posting URL.
+
+---
+
 ### Phase 2: Assessing candidates
 
 This is the longest phase. Use parallelism to make it faster and stream results to keep the user engaged.
@@ -172,7 +205,7 @@ For each candidate URL, try in order until usable content is retrieved:
 1. **Direct WebFetch** — always try first (fast, no dependencies; works for Lever, plain HTML career pages, and some custom sites)
 2. **Chrome MCP** — if direct fetch returns a JS skeleton (< 500 chars body text or no visible role content): `navigate` to the URL, then extract `document.body.innerText` via `javascript_tool`
 3. **Aggregator mirror** — if Chrome is also unavailable: search `site:builtin.com "{role title} {company}"` or `himalayas.app/{company}`. Note "content sourced from aggregator — verify posting is still live" in the candidate record.
-4. **Google snippet** — last resort: use the Google search result snippet as an abbreviated JD. Note "limited JD content — snippet only" in the assessment.
+4. **Skip and log.** If Tiers 1–3 all fail, skip the role and add the company to "Companies to Watch" in the brief. Snippet-only content is not a basis for assessment — assessing on a snippet is how stale postings get surfaced as "Strong" matches.
 
 Batch all direct-fetch attempts concurrently in groups of 5. Handle failures individually with Chrome or aggregator.
 

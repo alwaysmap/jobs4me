@@ -25,6 +25,7 @@ Examples of good patterns:
 - "Travel > 15%" (learned from Veeam at 40%)
 - "Requires deep hands-on software engineering" (learned from Toast)
 - "Enterprise-conglomerate-acquired company" (learned from Mission Cloud via CDW)
+- "Posting is stale or closed" — canonical pattern. Seed this on first decline-pattern audit if missing. Use it whenever a role is declined because the posting closed between search and review (the `verify-posting` liveness gate catches most stale postings before tracker write, but rolling closures still slip through). Decline reasons containing "stale", "closed", "filled", "removed", or "no longer hiring" should match this pattern.
 
 Examples of one-offs that shouldn't become patterns:
 - "I already know someone there and it's awkward"

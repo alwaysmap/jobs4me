@@ -51,6 +51,33 @@ const STAGE_TRANSITIONS = {
 
 const TERMINAL_STAGES = new Set(['declined', 'rejected', 'closed']);
 
+// Liveness verification — phrases that mean the posting is closed.
+// Matched case-insensitively against the page body.
+const CLOSURE_PHRASES = [
+  'no longer accepting applications',
+  'position filled',
+  'this role is closed',
+  'this requisition has been closed',
+  'we are not currently hiring for this position',
+  'this position has been filled',
+  'this job is no longer available',
+  'applications are closed',
+];
+
+// ATS hosts where deep-links are known to redirect to a generic board
+// when the role is removed. We layer an extra check on these.
+const ATS_HOST_RE = /(greenhouse\.io|lever\.co|ashbyhq\.com)/i;
+
+// "Generic board" CTA phrases — if present without the role title on an
+// ATS page, the deep-link almost certainly resolved to the company root.
+const ATS_GENERIC_CTA_PHRASES = [
+  'view all jobs',
+  'see all positions',
+  'all open roles',
+  'all open positions',
+  'see all jobs',
+];
+
 const YAML_DUMP_OPTIONS = {
   lineWidth: -1,
   noRefs: true,
@@ -598,7 +625,7 @@ function escapeHtmlScript(json) {
 // written back as a unit.
 // ────────────────────────────────────────────────────────────────
 
-function addEntry(doc, entry) {
+function addEntry(doc, entry, opts = {}) {
   if (!entry.company) throw new Error('Missing required field: company');
 
   const defaults = {
@@ -608,6 +635,19 @@ function addEntry(doc, entry) {
     dates: { identified: today() },
   };
   const merged = { ...defaults, ...entry, dates: { ...defaults.dates, ...entry.dates } };
+
+  // Liveness gate: a `suggested` entry must have been verified live, or
+  // the caller must have opted out via skipLivenessCheck. Anything else
+  // (manually adding an `applied`/`interviewing` entry retroactively) is
+  // exempt — the user wouldn't be there if the role weren't real.
+  if (merged.stage === 'suggested' && !opts.skipLivenessCheck) {
+    if (!merged.dates || !merged.dates.liveness_verified) {
+      throw new Error(
+        'Adding stage=suggested requires --liveness-verified-at <ISO timestamp> ' +
+        '(or --skip-liveness-check to override). Run `tracker.js verify-posting --url ...` first.'
+      );
+    }
+  }
 
   const dupe = doc.applications.find(a =>
     a.company === merged.company && a.role === merged.role
@@ -816,6 +856,97 @@ function buildBoard(dir, options = {}) {
 }
 
 // ────────────────────────────────────────────────────────────────
+// Liveness verification
+//
+// Fetches a posting URL and runs a structured set of checks to decide
+// whether the role is open. The agent calls this before adding any
+// `suggested` entry to tracker; a failed check sends the role to
+// "Companies to Watch" instead of the tracker.
+// ────────────────────────────────────────────────────────────────
+
+async function verifyPosting(url, { roleTitle, timeoutMs } = {}) {
+  const fetchedAt = new Date().toISOString();
+  const result = {
+    url,
+    final_url: url,
+    status: null,
+    live: false,
+    checks: {
+      status_2xx: false,
+      title_present: roleTitle ? false : null,
+      no_closure_phrase: false,
+      is_specific_page: false,
+    },
+    closure_phrase_matched: null,
+    fetched_at: fetchedAt,
+    error: null,
+  };
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs || 10000);
+
+  let response;
+  try {
+    response = await fetch(url, {
+      redirect: 'follow',
+      signal: controller.signal,
+      headers: {
+        // Identify ourselves; some boards 403 on bare clients.
+        'user-agent': 'jfm-tracker/0.8 (+https://jobs4me.org)',
+        accept: 'text/html,application/xhtml+xml,*/*;q=0.8',
+      },
+    });
+  } catch (err) {
+    clearTimeout(timer);
+    result.error = err.name === 'AbortError' ? `timeout after ${timeoutMs || 10000}ms` : err.message;
+    return result;
+  }
+  clearTimeout(timer);
+
+  result.status = response.status;
+  result.final_url = response.url || url;
+  result.checks.status_2xx = response.status >= 200 && response.status < 300;
+
+  let body = '';
+  try {
+    body = await response.text();
+  } catch (err) {
+    result.error = `body read failed: ${err.message}`;
+    return result;
+  }
+  const bodyLower = body.toLowerCase();
+
+  // Closure-phrase scan
+  const matchedClosure = CLOSURE_PHRASES.find(p => bodyLower.includes(p));
+  result.closure_phrase_matched = matchedClosure || null;
+  result.checks.no_closure_phrase = !matchedClosure;
+
+  // Role-title scan (case-insensitive substring; null when no title given)
+  if (roleTitle) {
+    result.checks.title_present = bodyLower.includes(String(roleTitle).toLowerCase());
+  }
+
+  // ATS-specific generic-board detection: if final URL is on an ATS host
+  // AND a "view all jobs" CTA appears AND the role title is missing, treat
+  // as a redirect to the company's generic board.
+  const isAts = ATS_HOST_RE.test(result.final_url);
+  const hasGenericCta = isAts && ATS_GENERIC_CTA_PHRASES.some(p => bodyLower.includes(p));
+  if (isAts && hasGenericCta && roleTitle && !result.checks.title_present) {
+    result.checks.is_specific_page = false;
+  } else {
+    result.checks.is_specific_page = result.checks.status_2xx;
+  }
+
+  result.live =
+    result.checks.status_2xx &&
+    result.checks.no_closure_phrase &&
+    result.checks.is_specific_page &&
+    (result.checks.title_present !== false); // null counts as "not failing"
+
+  return result;
+}
+
+// ────────────────────────────────────────────────────────────────
 // Command implementations
 //
 // Each returns a result object. None call process.exit — that's
@@ -834,9 +965,26 @@ const commands = {
 
   add(dir, args) {
     const doc = readTracker(dir);
-    const entry = addEntry(doc, parseJsonArg(args.json, 'json', { expect: 'object' }));
+    const entryRaw = parseJsonArg(args.json, 'json', { expect: 'object' });
+    if (args['liveness-verified-at']) {
+      entryRaw.dates = { ...(entryRaw.dates || {}), liveness_verified: args['liveness-verified-at'] };
+    }
+    const opts = { skipLivenessCheck: args['skip-liveness-check'] === true || args['skip-liveness-check'] === 'true' };
+    const entry = addEntry(doc, entryRaw, opts);
     writeTracker(dir, doc);
     return entry;
+  },
+
+  async 'verify-posting'(_dir, args) {
+    if (!args.url) throw new Error('Missing --url');
+    const timeoutMs = args['timeout-ms'] ? parseInt(args['timeout-ms'], 10) : 10000;
+    if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+      throw new Error('--timeout-ms must be a positive integer');
+    }
+    return verifyPosting(args.url, {
+      roleTitle: args['role-title'] || null,
+      timeoutMs,
+    });
   },
 
   update(dir, args) {
@@ -943,7 +1091,7 @@ const commands = {
     const results = ops.map(op => {
       try {
         const handlers = {
-          add:     () => addEntry(doc, op.entry || {}),
+          add:     () => addEntry(doc, op.entry || {}, { skipLivenessCheck: op.skip_liveness_check === true }),
           update:  () => updateEntry(doc, op.id, op.fields || {}),
           decline: () => declineEntry(doc, op.id, op.reason || ''),
           stage:   () => stageEntry(doc, op.id, op.stage),
@@ -1342,6 +1490,7 @@ const commands = {
         'Batch':        ['batch', 'batch-decline', 'filter-candidates'],
         'Config':       ['get-profile', 'set-profile', 'get-archetypes', 'set-archetypes', 'get-filters', 'set-filters', 'update-filter-list', 'update-source'],
         'Files':        ['save-jd', 'migrate', 'paths', 'needs-research'],
+        'Liveness':     ['verify-posting'],
         'Board':        ['board-json', 'build-board', 'list-briefs'],
         'Query':        ['count', 'find'],
         'Housekeeping': ['init', 'validate', 'add-decline-pattern', 'schema', 'help'],
@@ -1378,6 +1527,7 @@ const REQUIRED_ARGS = {
   'set-filters':         ['json'],
   'update-filter-list':  ['list'],
   'update-source':       ['name'],
+  'verify-posting':      ['url'],
 };
 
 // ────────────────────────────────────────────────────────────────
@@ -1398,7 +1548,7 @@ function detectWorkspace() {
   return null;
 }
 
-function main() {
+async function main() {
   const args = parseArgs(process.argv);
   const cmd = args._command;
   const explicitDir = args.dir || process.env.JFM_DIR;
@@ -1440,7 +1590,10 @@ function main() {
   }
 
   try {
-    const result = handler(dir, args);
+    let result = handler(dir, args);
+    if (result && typeof result.then === 'function') {
+      result = await result;
+    }
     console.log(JSON.stringify(result, null, 2));
 
     // Auto-rebuild board after mutations (pass --no-board to skip)
@@ -1457,4 +1610,7 @@ function main() {
   }
 }
 
-main();
+main().catch(err => {
+  console.error(`Fatal: ${err.message}`);
+  process.exit(1);
+});

@@ -176,6 +176,16 @@ TESTS=(
   # Unit 6: filter-candidates skip_companies wiring
   test_filter_candidates_skip_companies_matches
   test_filter_candidates_skip_companies_legacy_skip_key
+
+  # Unit 7: liveness gate enforcement on add
+  test_add_suggested_without_liveness_rejected
+  test_add_suggested_with_liveness_verified_at_accepted
+  test_add_suggested_with_skip_flag_accepted
+  test_add_non_suggested_stage_no_liveness_required
+  test_batch_add_suggested_without_liveness_rejected
+  test_batch_add_suggested_with_skip_liveness_accepted
+  test_verify_posting_requires_url
+  test_verify_posting_handles_unreachable_host
 )
 
 # ── Unit 2 scenarios ───────────────────────────────────────────
@@ -409,7 +419,7 @@ test_wiring_batch_happy_path() {
   ws=$(setup_workspace)
   # Seed a record, then decline it via batch to exercise the happy path.
   local id
-  id=$(node "$TRACKER" add --dir "$ws" --json '{"company":"BatchCo","role":"TPM"}' 2>/dev/null | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{const o=JSON.parse(d);process.stdout.write(o.id);})')
+  id=$(node "$TRACKER" add --dir "$ws" --skip-liveness-check --json '{"company":"BatchCo","role":"TPM"}' 2>/dev/null | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{const o=JSON.parse(d);process.stdout.write(o.id);})')
   local out
   set +e
   out=$(node "$TRACKER" batch --dir "$ws" --json "[{\"op\":\"decline\",\"id\":\"$id\"}]" 2>/dev/null)
@@ -565,11 +575,13 @@ test_no_json_parse_args_remains() {
 # ── Unit 5 scenarios: stored_at annotations ────────────────────
 
 # Seed a single application and echo its id.
+# Tests bypass the liveness gate: fixture data is for behavior under test,
+# not for verifying live postings. Real callers must satisfy the gate.
 seed_app() {
   local ws="$1"
   local company="${2:-Acme}"
   local role="${3:-TPM}"
-  node "$TRACKER" add --dir "$ws" --json "{\"company\":\"$company\",\"role\":\"$role\"}" 2>/dev/null |
+  node "$TRACKER" add --dir "$ws" --skip-liveness-check --json "{\"company\":\"$company\",\"role\":\"$role\"}" 2>/dev/null |
     node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{const o=JSON.parse(d);process.stdout.write(o.id);})'
 }
 
@@ -765,6 +777,112 @@ YAML
   out=$(node "$TRACKER" filter-candidates --dir "$ws" --json '[{"company":"Legacy Co","role":"TPM","url":"https://example.com/l"}]' 2>/dev/null)
   assert_json_field "$out" "passed" "0" "legacy skip key should not pass"
   assert_json_field "$out" "filtered_detail.0.reason" "skip_list" "legacy skip key filtered as skip_list"
+}
+
+# ── Unit 7 scenarios — liveness gate ───────────────────────────
+
+# A bare `add` of a `suggested` entry must be refused — the agent has
+# to verify-posting first and pass --liveness-verified-at, or
+# explicitly opt out with --skip-liveness-check.
+test_add_suggested_without_liveness_rejected() {
+  local ws
+  ws=$(setup_workspace)
+  local stderr
+  set +e
+  stderr=$(node "$TRACKER" add --dir "$ws" --json '{"company":"Acme","role":"TPM"}' 2>&1 >/dev/null)
+  local rc=$?
+  set -e
+  assert_exit_code 1 "$rc" "add suggested without liveness exits non-zero"
+  assert_contains "$stderr" "liveness-verified-at" "error mentions the required flag"
+  assert_contains "$stderr" "verify-posting" "error points at the verify-posting command"
+}
+
+test_add_suggested_with_liveness_verified_at_accepted() {
+  local ws
+  ws=$(setup_workspace)
+  local out
+  set +e
+  out=$(node "$TRACKER" add --dir "$ws" --liveness-verified-at "2026-04-28T12:00:00Z" --json '{"company":"Acme","role":"TPM"}' 2>&1)
+  local rc=$?
+  set -e
+  assert_exit_code 0 "$rc" "add with liveness-verified-at succeeds"
+  assert_json_field "$out" "company" "Acme" "entry persisted"
+  assert_json_field "$out" "dates.liveness_verified" "2026-04-28T12:00:00Z" "liveness_verified date persisted on entry"
+}
+
+test_add_suggested_with_skip_flag_accepted() {
+  local ws
+  ws=$(setup_workspace)
+  local out
+  set +e
+  out=$(node "$TRACKER" add --dir "$ws" --skip-liveness-check --json '{"company":"Acme","role":"TPM"}' 2>&1)
+  local rc=$?
+  set -e
+  assert_exit_code 0 "$rc" "add with --skip-liveness-check succeeds"
+  assert_json_field "$out" "company" "Acme" "skip-liveness-check still persists entry"
+}
+
+# Adding a non-suggested entry retroactively (e.g., user manually marking
+# something as already-applied) does NOT require liveness — the user's
+# presence is the verification.
+test_add_non_suggested_stage_no_liveness_required() {
+  local ws
+  ws=$(setup_workspace)
+  local out
+  set +e
+  out=$(node "$TRACKER" add --dir "$ws" --json '{"company":"Acme","role":"TPM","stage":"applied"}' 2>&1)
+  local rc=$?
+  set -e
+  assert_exit_code 0 "$rc" "add stage=applied without liveness succeeds"
+  assert_json_field "$out" "stage" "applied" "stage persisted"
+}
+
+test_batch_add_suggested_without_liveness_rejected() {
+  local ws
+  ws=$(setup_workspace)
+  local out
+  set +e
+  out=$(node "$TRACKER" batch --dir "$ws" --json '[{"op":"add","entry":{"company":"BatchCo","role":"TPM"}}]' 2>/dev/null)
+  set -e
+  assert_json_field "$out" "results.0.ok" "false" "batch add without liveness fails per-op"
+  assert_contains "$out" "liveness-verified-at" "batch add error surfaces liveness flag name"
+}
+
+test_batch_add_suggested_with_skip_liveness_accepted() {
+  local ws
+  ws=$(setup_workspace)
+  local out
+  set +e
+  out=$(node "$TRACKER" batch --dir "$ws" --json '[{"op":"add","skip_liveness_check":true,"entry":{"company":"BatchCo","role":"TPM"}}]' 2>/dev/null)
+  set -e
+  assert_json_field "$out" "results.0.ok" "true" "batch add with skip_liveness_check succeeds"
+}
+
+test_verify_posting_requires_url() {
+  local ws
+  ws=$(setup_workspace)
+  local stderr
+  set +e
+  stderr=$(node "$TRACKER" verify-posting --dir "$ws" 2>&1 >/dev/null)
+  local rc=$?
+  set -e
+  assert_exit_code 1 "$rc" "verify-posting without --url exits non-zero"
+  assert_contains "$stderr" "url" "verify-posting error names the missing flag"
+}
+
+# verify-posting against a guaranteed-unresolvable host returns a
+# structured live:false result — never crashes.
+test_verify_posting_handles_unreachable_host() {
+  local ws
+  ws=$(setup_workspace)
+  local out
+  set +e
+  out=$(node "$TRACKER" verify-posting --dir "$ws" --url "http://this-host-does-not-exist.invalid/job/1" --timeout-ms 3000 2>/dev/null)
+  local rc=$?
+  set -e
+  assert_exit_code 0 "$rc" "verify-posting on unreachable host still exits 0"
+  assert_json_field "$out" "live" "false" "unreachable host yields live=false"
+  assert_json_field "$out" "checks.status_2xx" "false" "unreachable host yields status_2xx=false"
 }
 
 run_tests
