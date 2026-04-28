@@ -15,6 +15,14 @@ user_summary: >
 
 Generate application materials — a cover letter and optionally a tailored resume — for a specific tracked role.
 
+## Files
+
+| File | Loaded when |
+|------|-------------|
+| `SKILL.md` (this file) | Always |
+| `references/voice.md` | Step 7 (cover letter), Step 8 (tailored resume) — contains the principles, mechanical rules, anti-pattern list, anti-fabrication rule, no-subtitle rule, and cover letter template. **MANDATORY** before any draft. |
+| `references/pdf-rendering.md` | Step 12 — pandoc / xelatex setup, fonts, margins, H1 handling. |
+
 ## When to Trigger
 
 - User explicitly asks to write a cover letter or application
@@ -24,7 +32,7 @@ Generate application materials — a cover letter and optionally a tailored resu
 
 ## Workflow
 
-1. Read `profile.yaml`, `archetypes.yaml`, and `tracker.yaml`
+1. Read `profile.yaml`, `archetypes.yaml`, and `tracker.yaml`.
 2. Find the application matching the company:
    ```bash
    node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js find --company "Company Name"
@@ -41,13 +49,9 @@ Generate application materials — a cover letter and optionally a tailored resu
    ```
 4. Read the JD (from `{role_dir}/jd.md`). If it doesn't exist, ask the user for the posting URL and fetch + save it.
 5. Read the Company Overview if it exists (`{company_dir}/overview.md`). If not, generate one first (see prep skill).
-6. Read the user's evidence:
-   - `profile.yaml` → `evidence.resume_url` (fetch the full resume)
-   - `profile.yaml` → `evidence.portfolio_urls`
-   - `profile.yaml` → `evidence.additional_context`
-   - `archetypes.yaml` → the matched role type's `experience_mapping`
-7. Generate the cover letter (see format below)
-8. Ask the user if they'd like a tailored resume (see format below)
+6. Read the user's evidence (in priority order — see Evidence Sources below).
+7. **Read `references/voice.md`** — mandatory before drafting. Generate the cover letter, applying every rule in voice.md plus `profile.yaml` → `writing_voice` (the user's durable voice rules).
+8. Ask the user if they'd like a tailored resume. If yes, generate it under the same voice rules (the no-subtitle rule and mechanical rules in `references/voice.md` apply); see Tailored Resume below for the resume-specific adjustments.
 9. Save files to the role directory:
    - Cover letter → `{role_dir}/cover-letter.md`
    - Tailored resume → `{role_dir}/resume.md` (if requested)
@@ -65,80 +69,9 @@ Generate application materials — a cover letter and optionally a tailored resu
 
     Iterate if they give feedback — update the file and show the revised version inline.
 
-12. **Render PDFs.** Once the user has approved the markdown drafts, render `cover-letter.md` and (if requested) `resume.md` to PDF using the canonical pandoc setup. See `references/pdf-rendering.md` for the full command, fonts, and rationale.
+12. **Render PDFs.** Once the user has approved the markdown drafts, render `cover-letter.md` and (if requested) `resume.md` to PDF using the canonical pandoc setup. **Read `references/pdf-rendering.md`** for the full command, fonts, header.tex content, and the H1 strip-vs-keep rule.
 
     After rendering, use `present_files` to share the PDFs alongside the markdown sources. The PDFs are what the user actually submits — markdown is the editable source.
-
-## Cover Letter Format
-
-The cover letter must sound like the user, not like a template. **Read `profile.yaml` → `writing_voice`** (a free-form block scalar of voice rules and preferences) before drafting; apply it on top of the principles below. The user maintains that field as their durable voice memory — anything they've corrected more than once should be there.
-
-Then follow these principles:
-
-- **Short** — 150-250 words. No padding, no filler.
-- **Personal hook** — Open with a specific connection to the company or role, not "I'm writing to apply for..." Something concrete: a product the user has used, a person they know there, a problem they've solved that maps directly.
-- **Evidence-linked** — Don't restate the resume. Link to 2-3 specific examples from the user's portfolio or blog that demonstrate fit. The user's website IS their portfolio.
-- **Honest about gaps** — If there's a gap the JD highlights, address it briefly and honestly rather than ignoring it.
-- **Simple close** — "Thanks," or "I hope to hear from you." No grandiose closing.
-- **No buzzwords** — No "synergy", "leverage", "passionate about", "excited to bring my skills". Use plain language.
-
-### Mechanical voice rules
-
-These apply to cover letters, resumes, `agent_summary` blocks, and any markdown the agent writes for the user:
-
-- **Em dashes have no surrounding spaces.** `word—word`, never `word — word`.
-- **One space after a period**, never two.
-- **Smart quotes are fine** when the editor preserves them; straight quotes (`'` `"`) are fine when it doesn't. Don't mix within a document.
-
-### Voice — patterns to cut on sight
-
-These all read as pitch / sales voice and must be removed. The closer is "state the fact, link the evidence, stop":
-
-- "caught my attention because…" / "what excites me about…" — pitch-hook framing
-- "I'd bring that playbook to…" / "I'd hit the ground running" — active selling
-- "A couple of pieces of evidence" / "let me share why I'm a fit" — casemaking preamble
-- "isn't abstract for me" / "the underlying work is the same" — performative confidence
-- "it reads like a role I'd interview for anywhere" — self-promotional
-- "The IC depth is real" / similar defensive self-promotion
-- Any closing crescendo: "I'd love the chance to…", "excited to bring…", "ready to dive in"
-
-Replace with concrete role/charter overlap. "I built this at GitHub. Details at [link]." beats "I'd bring my proven playbook to scale your TPM org."
-
-### Never fabricate inner thoughts, history, or feelings
-
-Hooks must come from facts the user provided or public evidence (resume, blog, profile.yaml, prior employers, location, public talks). Do not invent:
-
-- Emotional framing — "excited about", "long admired", "always wanted to work on X"
-- Personal history of interest — "I've watched X for years", "I've been using X since…", "I've been thinking about X"
-- Inferred opinions — "I love what you're building" (unless the user said so)
-
-If a hook needs a personal connection and you don't have one, ask the user — or write a hook that leads with concrete role/charter overlap instead.
-
-### Structure
-
-**No "Tailored for {Company} — {Role}" subtitle, tagline, or italic header line.** The folder and filename convey it. Putting it in the document signals customization to the hiring manager and adds noise.
-
-Cover letter header: `# Cover Letter — {Company}, {Role}` (the H1 gets stripped at PDF render — see `references/pdf-rendering.md`) → blank line → date → blank line → salutation. No subtitle.
-
-```
-# Cover Letter — {Company}, {Role}
-
-{Date}
-
-Dear {hiring contact, or "Hiring team" if unknown},
-
-{Personal hook — 1-2 sentences connecting to the company/role}
-
-{Core pitch — 2-3 sentences on why the user is a strong fit, with inline links to evidence}
-
-{Gap acknowledgment if relevant — 1 sentence}
-
-{Simple close}
-
-{User's name}
-{Contact info from profile.yaml}
-{Portfolio URL}
-```
 
 ## Tailored Resume
 
@@ -149,7 +82,7 @@ Only generate if the user asks. The tailored resume is NOT a rewrite — it's th
 - **Highlight** specific achievements that map to the JD's requirements
 - **Keep everything truthful** — never invent experience, inflate numbers, or claim skills the user doesn't have
 
-**No "Tailored for {Company} — {Role}" subtitle, tagline, or italic header line.** Same rule as the cover letter: the folder and filename carry that context. Resume header structure: `# {Candidate Name}` → blank line → contact line → `## Summary`. Nothing in between.
+Header structure and the no-subtitle rule are in `references/voice.md` ("No 'Tailored for…' subtitle" section) — same rules apply to both cover letter and resume.
 
 ## Iteration
 
@@ -159,7 +92,7 @@ The user will almost certainly want to edit the cover letter. When they give fee
 2. Re-save to the same file
 3. Don't re-explain what you changed — just show the updated version
 
-Keep the iteration tight. The user knows what they want to sound like.
+Keep the iteration tight. The user knows what they want to sound like. Recurring corrections (e.g., "stop saying 'caught my attention'") belong in `profile.yaml` → `writing_voice` so they stick across all future drafts.
 
 ## Post-Apply
 
@@ -180,7 +113,3 @@ Read evidence in this order of preference:
 5. `archetypes.yaml` → the matched role type's `experience_mapping`
 6. Company Overview (`{company_dir}/overview.md`) for company context
 7. JD (`{role_dir}/jd.md`) for role requirements
-
-## Additional Resources
-
-- **`references/pdf-rendering.md`** — canonical pandoc / xelatex setup for converting markdown drafts to submission-ready PDFs (Step 12)
