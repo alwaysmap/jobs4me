@@ -33,7 +33,7 @@ Single quotes matter when the path contains spaces or special characters (`!`, `
 # List all applications as JSON
 node tracker.js list
 # Get one application by id
-node tracker.js get --id acme-corp-director-of-tpm
+node tracker.js get --id acme-corp-director-engineering
 # Find by company name (fuzzy match)
 node tracker.js find --company "Acme"
 # Count by stage
@@ -47,15 +47,15 @@ node tracker.js validate```
 
 ```bash
 # Add a new application (pass fields as JSON)
-node tracker.js add --dir . --json '{"company":"Acme Corp","role":"Director of TPM","url":"https://acme.com/careers","archetype":"tpm_leadership","agent_summary":"### Recommendation\n**Strong** — ..."}'
+node tracker.js add --dir . --json '{"company":"Acme Corp","role":"Director, Engineering","url":"https://acme.com/careers","archetype":"engineering_leadership","agent_summary":"### Recommendation\n**Strong** — ..."}'
 
 # Update fields on an existing application (merge, not replace)
-node tracker.js update --id acme-corp-director-of-tpm --dir . --json '{"notes":"Phone screen went well","stage":"interviewing"}'
+node tracker.js update --id acme-corp-director-engineering --dir . --json '{"notes":"Phone screen went well","stage":"interviewing"}'
 
 # Change stage only
-node tracker.js stage --id acme-corp-director-of-tpm --stage applied
+node tracker.js stage --id acme-corp-director-engineering --stage applied
 # Decline with a reason
-node tracker.js decline --id acme-corp-director-of-tpm --reason "40% travel required"
+node tracker.js decline --id acme-corp-director-engineering --reason "40% travel required"
 # Initialize an empty tracker
 node tracker.js init
 # Add a decline pattern to filters.yaml
@@ -117,7 +117,7 @@ Only markdown content files — never YAML config:
 
 Example flow:
 1. Write files
-2. Call `present_files(["${JFM_DIR}/companies/Oracle/overview.md", "${JFM_DIR}/companies/Oracle/2026-03-30-sr-principal-tpm/prep.md", "${JFM_DIR}/Kanban/index.html"])`
-3. Tell the user: "Created company overview and interview prep for Oracle. Both are viewable on your board — click the role card to read them."
+2. Call `present_files(["${JFM_DIR}/companies/Acme Corp/overview.md", "${JFM_DIR}/companies/Acme Corp/2026-03-30-director-engineering/prep.md", "${JFM_DIR}/Kanban/index.html"])`
+3. Tell the user: "Created company overview and interview prep for Acme Corp. Both are viewable on your board — click the role card to read them."
 
 This applies to ALL skills that write files — search (JDs, briefs, overviews), prep (overview, prep), apply (cover letter, resume), assess (JD, overview), board (Kanban/index.html).

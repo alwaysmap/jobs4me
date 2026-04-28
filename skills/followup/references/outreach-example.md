@@ -1,11 +1,11 @@
 # Example Mode 2 outreach file
 
-This is a synthetic target for what `{role_dir}/outreach.md` should look like after `/jfm:followup {company}` finishes drafting. The role below is made up — an Affirm-style fintech Sr. Director Technical Programs position that has a mission-alignment line in the JD. Use this as a structural anchor when writing real outreach files.
+This is a synthetic target for what `{role_dir}/outreach.md` should look like after `/jfm:followup {company}` finishes drafting. The role below is placeholder — a generic Sr. Director Engineering position at a fictional B2B SaaS company. Use this as a structural anchor when writing real outreach files; the user's actual prior employer, role keywords, and gap framing will be drawn from `profile.yaml` and the role's JD.
 
 ---
 
 ```markdown
-# Outreach drafts — Acme Finance · Sr. Director, Technical Programs
+# Outreach drafts — Acme Corp · Sr. Director, Engineering
 
 **Applied:** 2026-04-04 · **Days since applied:** 6
 **Generated:** 2026-04-10
@@ -15,11 +15,11 @@ This is a synthetic target for what `{role_dir}/outreach.md` should look like af
 
 Hi {Name},
 
-I applied last week for the Sr. Director, Technical Programs role. Wanted to send a short note because the fit is unusually close to my actual work.
+I applied last week for the Sr. Director, Engineering role. Wanted to send a short note because the fit is unusually close to my actual work.
 
-I ran the TPM function at GitHub through the Copilot launch — roughly a 1,000-person engineering org, multi-quarter program across security, compliance, and GTM. That's the same shape of work the JD describes.
+{User's strongest-alignment comparison from `profile.yaml` evidence — one specific past program with concrete scope and outcome that mirrors what the JD describes. Pulled from cover-letter.md if a clear hook already exists.}
 
-The honest gap: I don't have financial services experience. Everything I've worked on has been developer tooling. I'd want to close that gap fast and I think my track record of doing exactly that at GitHub (going from zero LLM experience to shipping Copilot) shows how I approach it.
+The honest gap: {gap from assessment or user-stated, in the user's voice — what's missing from their background that the JD asks for}. {One sentence on how they'd approach closing that gap, grounded in a specific past instance of doing exactly that.}
 
 Would love 15 minutes if it's useful — happy to send a one-pager first.
 
@@ -31,15 +31,15 @@ Would love 15 minutes if it's useful — happy to send a one-pager first.
 
 **Outer ask (to the mutual connection):**
 
-Hey {Mutual}, quick ask — I applied for the Sr. Director, Technical Programs role at Acme Finance last week and noticed you're connected to {Name}, who looks like the likely hiring manager. Would you mind forwarding the note below if you think it's worth flagging? Totally fine if not — just didn't want to send it cold if there's a better path. Thanks either way.
+Hey {Mutual}, quick ask — I applied for the Sr. Director, Engineering role at Acme Corp last week and noticed you're connected to {Name}, who looks like the likely hiring manager. Would you mind forwarding the note below if you think it's worth flagging? Totally fine if not — just didn't want to send it cold if there's a better path. Thanks either way.
 
 **Forwardable blurb (paste this):**
 
-Hi {Name} — {Mutual} offered to pass this along. I applied last week for the Sr. Director, Technical Programs role at Acme Finance.
+Hi {Name} — {Mutual} offered to pass this along. I applied last week for the Sr. Director, Engineering role at Acme Corp.
 
-I ran the TPM function at GitHub through the Copilot launch — a 1,000-person engineering org delivering a major program across security, compliance, and GTM. That's the same shape of work described in the JD.
+{Same strongest-alignment comparison as variant 1, lightly reframed for forwardability.}
 
-The honest gap is financial services experience. I haven't worked in fintech before. I think the ability to absorb a new domain fast is the thing I'd want to point to from GitHub, where I went from zero LLM experience to shipping Copilot.
+The honest gap is {gap}. {One sentence on how the user would approach closing it.}
 
 Would love 15 minutes to talk through whether the fit is real.
 
@@ -51,9 +51,9 @@ Would love 15 minutes to talk through whether the fit is real.
 
 Hi {Name},
 
-Following up on my application for the Sr. Director, Technical Programs role — submitted last week.
+Following up on my application for the Sr. Director, Engineering role — submitted last week.
 
-Not looking to jump the queue, just wanted to flag that the fit is unusually close: I ran the TPM function at GitHub through the Copilot launch, which is the same scale and shape of program the JD describes.
+Not looking to jump the queue, just wanted to flag that the fit is unusually close: {one-line specific comparison from the user's background}.
 
 Any sense of the timeline, or anything I can send ahead to help the review? Happy to make a 15-minute call work if that's useful.
 
@@ -77,9 +77,9 @@ Target send window is 2026-04-19 to 2026-04-25 based on your cadence — that's 
 *Notes on this example:*
 
 - Every variant leads with the application fact and one specific comparison. None of them start with "I hope this finds you well" or similar throat-clearing.
-- The honest gap (financial services experience) is named in the user's own voice in every variant, before the reader has to infer it. The follow-up sentence explains why the user thinks the gap is closable — self-awareness without being defensive.
-- The mission line from the JD is not platitudinized. The drafts don't say "I'm passionate about your mission to build honest financial products" — if the user supplied a specific take during the validation conversation, it would go here; otherwise the angle is omitted.
+- The honest gap is named in the user's own voice in every variant, before the reader has to infer it. The follow-up sentence explains why the user thinks the gap is closable — self-awareness without being defensive.
+- Mission lines from the JD are not platitudinized. The drafts don't say "I'm passionate about your mission" — if the user supplied a specific take during the validation conversation, it would go here; otherwise the angle is omitted.
 - The warm-intro variant includes both the outer ask (to the mutual) and the forwardable blurb, so the mutual can copy-paste without writing anything themselves. That's the whole point of the variant.
-- Word counts: variant 1 is ~125 words, variant 2's forwardable blurb is ~130 words, variant 3 is ~90 words. All inside the ±20-word envelope around the 130-word target.
+- Word counts target ~130 words ±20 per variant.
 - The sequencing guidance is specific about which variant to try first given the state of the user's network — not generic "pick whichever feels right."
 - The advisory footer at the bottom is non-optional. Every real `outreach.md` file must include it verbatim or very close to it.

@@ -39,23 +39,23 @@ For each piece of information in a user message, ask: "Where does this live?"
 
 ## Example: Compound Message Decomposition
 
-User: *"I don't see the role for Cognite but the company is interesting. Please decline this but add Cognite to my watch list, and maybe companies like this because my project history at Woolpert includes working with public water utilities, and I have a general interest [link]. [careers URL]"*
+User: *"I don't see the role for {Company} but the company is interesting. Please decline this but add {Company} to my watch list, and maybe companies like this because my project history at {PriorEmployer} includes working with {industry}, and I have a general interest [link]. [careers URL]"*
 
 This contains **5 distinct actions**:
 
 1. **Decline the role** → `tracker.js decline --id <id> --reason "role not found/not a fit"`
-2. **Add Cognite to watch list** → `tracker.js update-filter-list --list watch --add '["Cognite"]'`
-3. **Add industry interest** (water utilities / industrial data) → `tracker.js update-filter-list --list industries --add '["water utilities", "industrial data"]'`
-4. **Add career evidence** (Woolpert + public water utilities work) → Probe for details, then `tracker.js set-profile` to add a case study
+2. **Add the company to watch list** → `tracker.js update-filter-list --list watch --add '["{Company}"]'`
+3. **Add industry interest** → `tracker.js update-filter-list --list industries --add '["<industry>", "<adjacent industry>"]'`
+4. **Add career evidence** ({PriorEmployer} + {industry} work) → Probe for details, then `tracker.js set-profile` to add a case study
 5. **Fetch the link and extract interests/evidence** → `WebFetch` the URL, identify relevant experience or interests, route to profile.yaml or filters.yaml
 
 Handle all 5. Don't silently drop any.
 
 ## When the User Mentions Experience
 
-When a user casually mentions work experience ("my project history at Woolpert includes working with public water utilities"), this is career evidence that belongs in `profile.yaml`. Before saving:
+When a user casually mentions work experience ("my project history at {PriorEmployer} includes working with {industry}"), this is career evidence that belongs in `profile.yaml`. Before saving:
 
-1. **Ask a focused follow-up** to get enough detail for a useful case study: "That's great context — can you tell me more about the water utilities work at Woolpert? What did you do and what was the outcome?"
+1. **Ask a focused follow-up** to get enough detail for a useful case study: "That's great context — can you tell me more about the {industry} work at {PriorEmployer}? What did you do and what was the outcome?"
 2. **Structure it** as a case study (situation, action, outcome) with skill tags
 3. **Save via** `tracker.js set-profile` to merge into the evidence section
 4. **Check if this changes search behavior** — does the experience suggest new role types, industries, or keywords?

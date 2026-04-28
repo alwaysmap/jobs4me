@@ -86,7 +86,7 @@ For each role type, search the web for matching roles:
 - Priority sources from `filters.yaml` first
 - Career pages of target companies
 - General job boards with role type keywords + location
-- **If `industries` is set**: append industry terms to job board queries as context keywords (e.g., "Technical Program Manager" + "water utilities"). This surfaces roles at companies in preferred sectors that might otherwise be missed by title-only searches.
+- **If `industries` is set**: append industry terms to job board queries as context keywords (e.g., the user's role title plus an industry from `filters.yaml` → `industries`). This surfaces roles at companies in preferred sectors that might otherwise be missed by title-only searches.
 
 **Read `references/career-page-search.md`** — describes the tiered approach for JS-rendered career pages (Chrome MCP, Google `site:`, aggregator, direct fetch), the Chrome availability check to run at the start of every sweep, and ATS-specific URL patterns + 404 handling. Career pages without a Chrome / Google fallback often return only a JS skeleton; the reference is the difference between finding roles and silently missing them.
 

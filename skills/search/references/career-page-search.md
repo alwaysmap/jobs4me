@@ -10,7 +10,7 @@ client-side. Use the tiered approach below.
 | Tier | Method | How | When to use |
 |------|--------|-----|-------------|
 | 1 | **Chrome MCP** | `tabs_context_mcp` → `navigate` to career URL → `javascript_tool` to extract `document.body.innerText` | Best: live, fully rendered. Use whenever Chrome is connected. |
-| 2 | **Google `site:` search** | `site:job-boards.greenhouse.io/SLUG "director" remote` | Chrome not available. Google indexes rendered pages — most reliable non-browser fallback. |
+| 2 | **Google `site:` search** | `site:job-boards.greenhouse.io/SLUG "<role-keyword>" remote` | Chrome not available. Google indexes rendered pages — most reliable non-browser fallback. |
 | 3 | **Aggregator mirror** | Search `builtin.com`, `himalayas.app`, or `remotive.com` | Secondary confirmation only. Flag staleness risk in brief. |
 | 4 | **Direct WebFetch** | Fetch the URL directly | Static sites, Lever pages, and some custom career pages. |
 
@@ -31,11 +31,18 @@ and note the fallback used in the search brief.
 
 ## Chrome MCP extraction pattern
 
-After `navigate()` to the career page URL:
+After `navigate()` to the career page URL. Build the relevance regex from
+the role titles in the user's `archetypes.yaml` rather than hard-coding —
+a designer's filter shouldn't include "VP Engineering" and an engineer's
+shouldn't include "Creative Director".
 
 ```javascript
+// Pseudocode — substitute the actual role keywords from archetypes.yaml
+// (titles array per role_type) into the regex. Example below uses
+// engineering-leadership keywords; replace as appropriate per user.
+const ROLE_REGEX = /<role-keyword-1>|<role-keyword-2>|<role-keyword-3>/i;
 const lines = document.body.innerText.split('\n').map(l => l.trim()).filter(l => l.length > 2);
-const relevant = lines.filter(l => /director|head of|VP |vice president|senior director|principal/i.test(l));
+const relevant = lines.filter(l => ROLE_REGEX.test(l));
 JSON.stringify({ total_lines: lines.length, relevant_count: relevant.length, relevant: relevant.slice(0, 30) });
 ```
 
@@ -48,11 +55,11 @@ URL or look for a "View all" element.
 
 | Platform | Career URL pattern | Google `site:` query |
 |----------|--------------------|----------------------|
-| Greenhouse | `job-boards.greenhouse.io/{slug}` | `site:job-boards.greenhouse.io/{slug} "director"` |
-| Ashby | `jobs.ashbyhq.com/{Company}` | `site:jobs.ashbyhq.com/{Company} "director"` |
-| Lever | `jobs.lever.co/{company}` | `site:jobs.lever.co/{company} "director"` |
-| Workday | `{company}.wd1.myworkdayjobs.com` | `site:{company}.wd1.myworkdayjobs.com "director"` |
-| Custom SPA | `company.com/careers` | `site:company.com/careers "director" "remote"` |
+| Greenhouse | `job-boards.greenhouse.io/{slug}` | `site:job-boards.greenhouse.io/{slug} "<role-keyword>"` |
+| Ashby | `jobs.ashbyhq.com/{Company}` | `site:jobs.ashbyhq.com/{Company} "<role-keyword>"` |
+| Lever | `jobs.lever.co/{company}` | `site:jobs.lever.co/{company} "<role-keyword>"` |
+| Workday | `{company}.wd1.myworkdayjobs.com` | `site:{company}.wd1.myworkdayjobs.com "<role-keyword>"` |
+| Custom SPA | `company.com/careers` | `site:company.com/careers "<role-keyword>" "remote"` |
 
 Greenhouse slugs are typically lowercase (`gitlab`, not `GitLab`). Ashby
 slugs often match the company name's casing exactly.

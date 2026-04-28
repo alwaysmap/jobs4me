@@ -27,7 +27,16 @@ This skill has two modes that share context and tone but serve different jobs:
 - **Mode 1 — Briefing.** Invoked as `/jfm:followup` with no args. Produces a timing-aware briefing of every role in the `applied` stage: what to do next on each one, why, and which actions cluster together this week.
 - **Mode 2 — Single-role outreach drafting.** Invoked as `/jfm:followup {company}`. Runs a short validating conversation about one role, then drafts three templated outreach variants (cold hiring manager, warm intro ask, recruiter ping) and saves them to the role's directory alongside the cover letter.
 
-Mode 2 is documented in the "Mode 2 — Single-role outreach drafting" section later in this file. The rest of this file covers Mode 1 and the shared constraints that apply to both.
+## Files
+
+| File | Loaded when |
+|------|-------------|
+| `SKILL.md` (this file) | Always |
+| `references/timing.md` | Mode 1 — cadence bands, override mechanism, days-since-applied source-of-truth, two-stage recommendation selection, follow-up-date stamping. |
+| `references/mode-2-drafting.md` | Mode 2 only — single-role workflow, context-card protocol, validating conversation, template shape, save format. Skip entirely in Mode 1. |
+| `references/example-output.md` | Mode 1 — sample briefing on a synthetic 6-role board, for shape reference. |
+| `references/outreach-example.md` | Mode 2 — full file shape for `{role_dir}/outreach.md`. |
+| `../search/references/routing.md` | First — before processing any user message. |
 
 ## Hard constraint: data access goes through tracker.js
 
@@ -59,60 +68,9 @@ If there are zero roles in `applied`, say so in one line and stop:
 
 > No roles in the applied stage right now — nothing to follow up on. Run `/jfm:review` if you have suggestions waiting.
 
-### Timing framework (defaults)
+### Compute recommendations
 
-The skill ships with sensible defaults tuned for Director+/Principal-TPM roles. These define the day-bands that drive recommendations:
-
-| Phase | Days since applied | Default action |
-|---|---|---|
-| Normal silence | 1–14 | Wait. No action needed. |
-| Warm-contact window | 15–21 | Activate warm contacts quietly if any exist. |
-| First follow-up | 21–30 | Short, no-pressure recruiter or hiring-manager note. |
-| Final follow-up | 30–45 | Last polite re-assertion of interest. |
-| Consider closed | 45+ | Move to closed unless there's a direct signal of life. |
-
-These are band boundaries, not single numbers. Senior/Director roles trend slower than IC — 30–60 day cycles from application to first screen are normal, and summer/holiday lulls stretch that further.
-
-### User-tunable cadence
-
-The user can override any individual threshold via an optional `follow_up_cadence` block in `profile.yaml`:
-
-```yaml
-follow_up_cadence:
-  normal_silence_days: 14
-  warm_contact_days: 15
-  first_followup_days: 21
-  final_followup_days: 30
-  consider_closed_days: 45
-```
-
-If the block is absent, defaults apply. If some keys are present and others are missing, missing keys fall back to defaults individually.
-
-**How the user tunes it without reading any docs:** If they push back on a threshold during a run ("21 days is too long for my market, I'd ping at 10"), offer to save the change in one turn:
-
-> Got it. Want me to save `first_followup_days: 10` as your default? Future runs will use it.
-
-On yes, persist via `tracker.js set-profile` — the existing shallow-merge semantics handle nested blocks without clobbering siblings:
-
-```bash
-node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js set-profile --json '{"follow_up_cadence":{"first_followup_days":10}}'
-```
-
-Same learning loop as decline patterns in the review skill. Users never have to read a config schema.
-
-### Computing days-since-applied
-
-Use `app.dates.applied` as the source of truth — it's set when the role enters the applied stage and never resets on subsequent edits.
-
-Fallback order if the preferred field is missing:
-
-1. `app.dates.applied` (preferred — set when the stage transitions to applied)
-2. `app.dates.identified` (when the role was first added to the tracker)
-3. `app.last_updated` (last touched — approximate)
-
-If the skill had to fall back to `dates.identified` or `last_updated` for a row, note it in the "why" column so the user knows the day count is approximate for that role.
-
-**Do not use `last_updated` as the primary source.** It's rewritten on every edit, including note appends — which would corrupt the clock for any role whose notes have been touched.
+**Read `references/timing.md`** before generating any per-role recommendation. The reference covers the cadence bands (defaults + overrides), the days-since-applied source-of-truth and fallback chain, and the two-stage recommendation function (base from band → overlay from notes/summary/decision signals). Stamping a follow-up date into notes also lives there.
 
 ### Briefing output format
 
@@ -147,34 +105,6 @@ Every Mode 1 run produces the same four sections, in order:
 
 See `references/example-output.md` for the full target briefing shape on a synthetic 6-role board.
 
-### Recommendation selection
-
-Recommendation selection is a two-stage function inside the skill prompt, not code.
-
-**Stage 1 — base recommendation from the cadence bands:**
-
-| Days since applied | Base recommendation |
-|---|---|
-| `< normal_silence_days` (default 14) | Wait |
-| `< warm_contact_days` (default 15) | Wait (warm-contact prompt if any exists) |
-| `< first_followup_days` (default 21) | Activate warm contact if any; otherwise wait |
-| `< final_followup_days` (default 30) | Send first follow-up |
-| `< consider_closed_days` (default 45) | Send final follow-up |
-| `>= consider_closed_days` | Consider closed |
-
-**Stage 2 — overlay signals from the role record.** Read `notes`, `agent_summary`, and `decision.reason` for signals that upgrade, downgrade, or replace the base recommendation:
-
-| Signal in notes / summary | Overlay |
-|---|---|
-| Prior follow-up with no response after 8+ days | Shift to *send final follow-up* or *consider closed* |
-| Warm contact or referral mentioned | Prioritize *activate warm contact* / *activate referral now* |
-| Assessment flagged comp below floor | *verify comp range first* — don't spend more energy until resolved |
-| Posting flagged as reposted | Negative signal — push toward *consider closed* |
-| Mission-alignment JD line noted | Add "find a warm path" emphasis in the Why column |
-| Empty notes | Use base recommendation unchanged; note "notes empty" in Why |
-
-Apply overlays in order; the last one wins when multiple apply.
-
 ### Footer actions — tracker.js commands
 
 Every confirmed footer action executes exactly one tracker.js command. Never run these without an explicit user yes.
@@ -187,19 +117,7 @@ node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js stage --id <id> --stage closed
 
 `applied → closed` is a valid transition. The board auto-rebuilds.
 
-**Stamp a follow-up date into notes.** Read existing notes first, then append a dated line. The format is fixed — greppable for future stale-detection:
-
-```bash
-# 1. Read existing notes
-node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js get --id <id>
-
-# 2. Append a new dated line, preserving the existing notes:
-node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js update --id <id> --json '{"notes":"<existing notes>\n2026-04-20: follow_up_due — send first ping to recruiter"}'
-```
-
-Canonical format: `YYYY-MM-DD: follow_up_due — <one-line reason>`. Always preserve existing notes — never overwrite them.
-
-**Note on interaction with the review skill's stale view:** Stamping a follow-up date resets `last_updated` to today, which drops the role out of the stale detection. This is intentional — after the user has committed to a follow-up date, the role should stop surfacing as "stale" until the stamped date approaches. Flag this briefly after the first stamp in a session.
+**Stamp a follow-up date:** see `references/timing.md` ("Stamping a follow-up date" section) for the exact `update --json` invocation and the canonical `YYYY-MM-DD: follow_up_due — <reason>` format. The reference also covers the interaction with the review skill's stale-view filter.
 
 **Save a cadence override:**
 
@@ -213,115 +131,9 @@ node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js set-profile --json '{"follow_up_ca
 
 ## Mode 2 — Single-role outreach drafting
 
-When the user names a specific company, the skill shifts from briefing to drafting. The job is to produce three templated outreach variants for that one role, saved to a file in the role's directory alongside the existing cover letter.
+When the user names a specific company (or accepts the Mode 1 footer's draft-outreach offer), shift from briefing to drafting. **Read `references/mode-2-drafting.md`** for the full Mode 2 workflow: role resolution, on-file context loading, prior-draft detection, the context card, the up-to-three validating questions with skip rules, the enforced template shape, the three variants (cold hiring manager / warm intro ask / recruiter ping), the save target, and the advisory close that pins the no-send boundary.
 
 This mode never sends, schedules, or transmits outreach. It drafts, saves, and advises. The user sends.
-
-### Invocation
-
-- `/jfm:followup {company}` — single-role mode on a role in `stage: applied`.
-- Natural language: "draft outreach for Affirm", "help me follow up on Zillow", "write a follow-up note for the ActBlue role".
-- Can also be triggered from Mode 1's footer offer. When triggered this way, the mode already has the role loaded — don't re-run the context reads.
-
-### Resolve the role
-
-Find the matching role via `find --company`. If multiple applied roles match, ask which one. If nothing matches in the applied stage, say so in one line and stop:
-
-```bash
-node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js find --company "Affirm"
-```
-
-> No applied role at **Affirm** right now. Run `/jfm:followup` for a full briefing or `/jfm:update` to log an application.
-
-Once the role is identified, load full context:
-
-```bash
-node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js get --id <id>
-node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js paths --id <id>
-node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js get-profile
-```
-
-From `paths --id <id>` you get the canonical `role_dir`, `company_dir`, and existence flags for the artifacts on disk.
-
-### Load on-file context silently
-
-Read whichever of these exist, and use them to pre-fill what you'd otherwise have to ask the user. Don't quote them wholesale — just mine them for signal:
-
-- `{role_dir}/jd.md` — job description. Source of requirement specifics and any mission-alignment lines.
-- `{role_dir}/cover-letter.md` — the strongest-alignment narrative the user already committed to. If this has a clear one-line hook, use it verbatim; don't ask the user to re-invent one.
-- `{company_dir}/overview.md` — company mission, product, and market context. Source for avoiding generic platitudes.
-- `{role_dir}/outreach.md` — prior drafts, if this isn't the first run for the role.
-
-The profile's `follow_up_cadence` (already loaded via `get-profile`) informs the target send window suggestion later in this flow.
-
-### Prior-draft detection
-
-If `{role_dir}/outreach.md` already exists, read it and show a one-line summary before doing anything else:
-
-> Found prior drafts in `{role_dir}/outreach.md` from {date}. Want me to regenerate from scratch (overwrite) or add a new dated section below the existing content?
-
-Default to regenerate-and-overwrite on yes. "Add dated section" is the lower-stakes option for iterative tuning.
-
-### Present a context card
-
-Before asking any questions, show the user what you already know. Keep it tight:
-
-> **{Company}** — {Role} · applied {N} days ago · cadence band: *{band name}*
->
-> On file:
-> - Cover letter: {yes — one-line hook from the letter / no}
-> - JD: {yes — short summary of the top 2-3 requirements / no}
-> - Company overview: {yes — one-line on mission/product / no}
-> - Warm contact mentioned in notes: {yes — name / no}
-> - Prior follow-up activity: {summary from notes / none logged}
-
-This tells the user what the drafts will be grounded in and lets them correct anything stale before the questions start.
-
-### Validating conversation — up to three questions, one at a time
-
-Ask only what isn't already clear from the context card. The ceiling is three questions total. The floor is zero — if the on-file context fully covers the template slots, skip straight to drafting and say so:
-
-> I have enough from your cover letter and the JD. Drafting now.
-
-When you do ask, ask one question at a time. Four question templates, with skip rules:
-
-1. **Strongest-alignment one-liner.** Skip if the cover letter already has a clear one-line hook.
-2. **The honest gap.** Skip if the assessment flagged one clearly.
-3. **Warm path.** Always ask.
-4. **Mission-specific take.** Only ask if the JD has a mission-alignment line.
-
-If the user says "just use what you have" at any point, stop asking and draft based on what's on file.
-
-### Template shape (enforced)
-
-Each of the three variants must:
-
-- **Lead** with the application fact plus a one-sentence strongest alignment. Never "I hope this finds you well."
-- **Include one concrete comparison** from the user's background — specific, not a list of adjectives.
-- **Name the honest gap** — stated before the reader has to infer it.
-- **Close with a 15-minute ask** — specific beats polite.
-- **Stay at ~130 words** (±20). Short is a feature.
-- **Avoid mission platitudes.**
-
-### Three variants
-
-**1. Cold hiring manager.** Direct application + ask.
-**2. Warm intro ask.** Addressed to a mutual connection, includes a forwardable blurb.
-**3. Recruiter / TA ping.** Lighter, process-focused.
-
-### Save to `{role_dir}/outreach.md`
-
-Write all three variants. See `references/outreach-example.md` for the full file shape.
-
-### Present the file inline
-
-After writing, use `present_files` to surface `{role_dir}/outreach.md` inline. Summarize in one paragraph which variant to try first and why.
-
-### Advisory close — every run
-
-> **Saved to `{role_dir}/outreach.md`.** I draft and save — I don't send, schedule, or transmit. You copy the one you want, adjust anything that doesn't sound like you, and send it yourself.
-
-The boundary is hard: no browser automation, no email integration, no LinkedIn access.
 
 ## Tone
 

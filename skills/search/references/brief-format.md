@@ -58,8 +58,8 @@ After each search sweep, write a brief to `briefs/{YYYY-MM-DD}.md` (or `{YYYY-MM
 
 | Industry Interest | Roles Found | Notes |
 |---|---|---|
-| water utilities | 2 | Both at regional utilities, director-level |
-| industrial data | 1 | Cognite — stretch on seniority |
+| {industry-from-filters-yaml} | 2 | Both at companies operating in the sector, director-level |
+| {adjacent-industry} | 1 | {Company} — stretch on seniority |
 
 {If no roles matched any industry interest, say so: "No roles found in your preferred industries this sweep. Consider adding more sources in these sectors — I can suggest some if you run `/jfm:tweak`."}
 
@@ -73,5 +73,5 @@ After each search sweep, write a brief to `briefs/{YYYY-MM-DD}.md` (or `{YYYY-MM
 - Keep the brief scannable. The user should be able to read it in 2 minutes and know what happened.
 - The "Companies to Watch" section is high value — these are roles the user might want to override the filters for. Always include the suggested action (e.g., "keep on watch — if remote version opens, high priority").
 - The "Near Misses" table should be concise — just enough to show what was filtered and why.
-- Market Observations should be honest about structural barriers (e.g., "most Director TPM roles this week require on-site Bay Area").
+- Market Observations should be honest about structural barriers (e.g., "most senior roles this week require on-site Bay Area", "remote roles dropped sharply across enterprise companies", or "salary bands held steady but options grants fell").
 - If zero new roles were found, say so directly and focus the brief on market observations and watch list activity.

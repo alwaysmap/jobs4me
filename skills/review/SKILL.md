@@ -122,15 +122,15 @@ node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js batch-decline --ids id1,id2,id3 --
 
 For mixed operations (e.g., "advance these three, decline the rest"), use the `batch` command:
 ```bash
-node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js batch --json '[{"op":"stage","id":"acme-vp-eng","stage":"maybe"},{"op":"decline","id":"bigco-tpm","reason":"too enterprise"}]'
+node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js batch --json '[{"op":"stage","id":"acme-vp-eng","stage":"maybe"},{"op":"decline","id":"bigco-director","reason":"too enterprise"}]'
 ```
 
 These write `tracker.yaml` once and auto-rebuild the board.
 
 **Good flow:**
 > **Acme Corp** — VP Engineering
-> TPM Leadership · identified Mar 20
-> **Strong** — deep match on technical program leadership, Copilot-scale experience maps directly
+> Engineering Leadership · identified Mar 20
+> **Strong** — deep match on the role's core requirements; experience from your prior tenure maps directly
 > [Job posting](https://...)
 
 User: "yes"

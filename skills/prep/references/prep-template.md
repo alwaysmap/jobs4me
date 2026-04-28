@@ -69,7 +69,7 @@
 
 ## Guidelines
 
-- Every story should have a **specific company name, scope, and outcome**. "I led a cross-functional team" is weak. "At GitHub I led 35 TPMs across Copilot, platform availability, and security" is strong.
+- Every story should have a **specific company name, scope, and outcome**. "I led a cross-functional team" is weak. "At {PriorEmployer} I led {team-size} {role-type}s across {project/program A}, {project/program B}, and {project/program C}" is strong — pulled from the user's actual evidence in `profile.yaml`.
 - Pull stories from the user's actual evidence — don't invent or embellish.
 - If the user has a portfolio or blog, link to specific posts/projects that support a story.
 - The "Gap to address" section is crucial. Interviewers appreciate honesty framed as self-awareness. "I haven't managed a 100-person org, but I built my team from 5 to 35 and navigated the challenges of that growth curve."

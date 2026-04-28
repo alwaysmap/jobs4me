@@ -74,7 +74,7 @@ If no URL is provided, ask the user for one. They can also paste the JD text dir
 
 ## Compound requests during assessment
 
-Users may share additional context alongside a job posting: "check this role — my work at Woolpert is relevant here because of water utilities" or "assess this, and add the company to my watch list."
+Users may share additional context alongside a job posting: "check this role — my work at {PriorEmployer} is relevant here because of {industry/domain match}" or "assess this, and add the company to my watch list."
 
 **After the assessment, scan the rest of the message for:**
 

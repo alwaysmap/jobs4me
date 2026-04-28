@@ -70,35 +70,35 @@ If the user shares a portfolio or directory URL, fetch it to confirm it's a usef
 
 ## Industry interests
 
-When the user expresses interest in an industry, sector, or domain — either directly ("I'm interested in water utilities") or indirectly ("companies like Cognite" when Cognite works in industrial data) — add the relevant industries to `filters.yaml`:
+When the user expresses interest in an industry, sector, or domain — either directly ("I'm interested in {industry}") or indirectly ("companies like {Company}" when {Company} operates in {industry}) — add the relevant industries to `filters.yaml`:
 
 ```bash
-node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js update-filter-list --list industries --add '["water utilities", "industrial data"]'
+node ${CLAUDE_PLUGIN_ROOT}/scripts/tracker.js update-filter-list --list industries --add '["<industry>", "<adjacent industry>"]'
 ```
 
 After adding, explain how this affects searches:
 
-> Got it — added "water utilities" and "industrial data" to your industry interests. I'll weight companies in these sectors more favorably in future searches.
+> Got it — added "{industry}" to your industry interests. I'll weight companies in this sector more favorably in future searches.
 
 **After adding an industry, always do these follow-ups:**
 
 1. **Suggest sources** — search for job boards, associations, or directories specific to that sector. Present 2-3 concrete suggestions:
-   > "For water utilities, you might want to add: **AWWA Career Center** (awwa.org/careers — job_board), **WaterWorld** (waterworld.com/careers — aggregator), or individual utility career pages. Want me to add any of these?"
+   > "For {industry}, you might want to add: **{Industry-specific job board}** ({URL} — job_board), **{Industry trade publication careers page}** ({URL} — aggregator), or individual company career pages. Want me to add any of these?"
 
 2. **Check the watch list** — if a specific company triggered the interest, add it to the watch list (and offer to add its careers page as a source)
 
-3. **Check role types** — do any existing role types in `archetypes.yaml` need keyword updates to capture roles in this sector? If the user targets "Technical Program Manager" roles, adding "utilities" or "infrastructure" to that role type's keywords helps surface relevant results. Confirm before changing.
+3. **Check role types** — do any existing role types in `archetypes.yaml` need keyword updates to capture roles in this sector? If the user's role type has industry-relevant keywords missing (e.g., domain terms specific to the sector), adding them helps surface relevant results. Confirm before changing.
 
-4. **Check career evidence** — does the user have experience in this industry? If they mentioned it ("my work at Woolpert with water utilities"), capture it as evidence. If they didn't mention specific experience, ask: "Do you have experience in this area, or is this a new interest?"
+4. **Check career evidence** — does the user have experience in this industry? If they mentioned it ("my work at {PriorEmployer} with {industry}"), capture it as evidence. If they didn't mention specific experience, ask: "Do you have experience in this area, or is this a new interest?"
 
 ## Extracting evidence from casual mentions
 
-Users often mention career experience in passing — "my project history at Woolpert includes working with public water utilities" — without realizing it's valuable evidence for the search agent. **Don't let these slide.** This is career evidence that strengthens fit assessments and cover letters.
+Users often mention career experience in passing — "my project history at {PriorEmployer} includes working with {industry}" — without realizing it's valuable evidence for the search agent. **Don't let these slide.** This is career evidence that strengthens fit assessments and cover letters.
 
 When the user mentions experience casually:
 
 1. **Acknowledge it and ask one focused follow-up** to get enough for a case study:
-   > "Working with public water utilities at Woolpert is great context for roles in this space. Can you tell me a bit more — what did you do there and what was the outcome?"
+   > "Working with {industry} at {PriorEmployer} is great context for roles in this space. Can you tell me a bit more — what did you do there and what was the outcome?"
 
 2. **Structure the response** as a case study (situation, action, outcome) with skill tags
 

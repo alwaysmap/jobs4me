@@ -33,7 +33,7 @@ evidence:                              # REQUIRED section
 preferences:                           # REQUIRED section
   comp_floor_usd: 200000             # REQUIRED - integer, no formatting
   comp_floor_gbp: 150000             # optional - for UK roles
-  comp_exceptions: "civic tech: $160K" # optional - string
+  comp_exceptions: "non-profit: $160K, early-stage startup: equity-heavy" # optional - string, free-form exceptions to the floor
   max_travel_pct: 25                  # REQUIRED - integer 0-100
   locations:                          # REQUIRED - array of strings
     - remote_us                       # use: remote_us, remote_uk, hybrid_<city>, onsite_<city>
@@ -117,7 +117,7 @@ decline_patterns:                      # top-level array of objects
 ### Notes
 - Sources are at the TOP LEVEL: `sources:`, not `include.sources:`
 - Skip list is `skip_companies:`, not `skip:`
-- `industries` captures positive sector/domain interests (e.g., "water utilities", "industrial data", "civic tech"). Used by the search agent to weight companies in these sectors more favorably. Managed via `update-filter-list --list industries --add/--remove`.
+- `industries` captures positive sector/domain interests (free-form strings — e.g., "fintech", "developer tools", "climate", "B2B SaaS", or any domain the user names). Used by the search agent to weight companies in these sectors more favorably. Managed via `update-filter-list --list industries --add/--remove`.
 - `decline_patterns` are learned automatically from `/jfm:update Company - decline reason`
 - Source `type` determines search behavior:
   - `job_board` / `aggregator` — searched with role type keywords + location

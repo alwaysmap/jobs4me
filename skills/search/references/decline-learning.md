@@ -21,10 +21,11 @@ Add a pattern when:
 - The pattern can be described concisely enough that a future search can check for it
 - The pattern won't accidentally filter out good roles
 
-Examples of good patterns:
-- "Travel > 15%" (learned from Veeam at 40%)
-- "Requires deep hands-on software engineering" (learned from Toast)
-- "Enterprise-conglomerate-acquired company" (learned from Mission Cloud via CDW)
+Examples of good patterns (illustrative — actual `learned_from` values come from the user's own decline history):
+
+- "Travel > 15%" — declined a role asking for 40% travel; pattern catches future high-travel postings.
+- "Requires deep hands-on coding for a senior management role" — declined a director-level role whose JD demanded daily coding; pattern catches similar mismatches.
+- "Enterprise-conglomerate-acquired company" — declined a role at a company recently rolled up under a larger enterprise where the user prefers smaller-org dynamics.
 - "Posting is stale or closed" — canonical pattern. Seed this on first decline-pattern audit if missing. Use it whenever a role is declined because the posting closed between search and review (the `verify-posting` liveness gate catches most stale postings before tracker write, but rolling closures still slip through). Decline reasons containing "stale", "closed", "filled", "removed", or "no longer hiring" should match this pattern.
 
 Examples of one-offs that shouldn't become patterns:

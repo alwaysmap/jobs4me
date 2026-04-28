@@ -53,7 +53,7 @@ These all read as pitch / sales voice and must be removed. The closer is
   "ready to dive in"
 
 Replace with concrete role/charter overlap. "I built this at GitHub. Details
-at [link]." beats "I'd bring my proven playbook to scale your TPM org."
+at [link]." beats "I'd bring my proven playbook to scale your team."
 
 ## Never fabricate inner thoughts, history, or feelings
 

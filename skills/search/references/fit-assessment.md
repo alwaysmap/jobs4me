@@ -6,7 +6,7 @@ Structured process for evaluating whether a role matches a user's profile.
 
 Check these first. If any fail, the role is an automatic pass (do not proceed to deeper analysis):
 
-- **Compensation**: Is the listed or estimated comp at or above the user's floor? (Check `preferences.comp_floor_usd` or `preferences.comp_floor_gbp`). Note any comp exception rules (e.g., civic tech floor).
+- **Compensation**: Is the listed or estimated comp at or above the user's floor? (Check `preferences.comp_floor_usd` or `preferences.comp_floor_gbp`). Note any comp exception rules from `comp_exceptions` — sectors or company types where the user accepts a lower floor.
 - **Location**: Does the role match the user's acceptable locations? Remote-only users should not see hybrid roles unless the user has listed that specific city.
 - **Travel**: Is travel under the user's max? Check the JD for phrases like "up to X% travel" or "frequent travel required."
 - **Seniority**: Is the role at or above the user's seniority floor? A Director-floor user should not see Senior Manager roles unless the scope is clearly Director-equivalent.
@@ -42,7 +42,7 @@ Also check the user's `profile.yaml` evidence (resume URL, portfolio, additional
 
 Read `filters.yaml` `industries`. If the list exists and is non-empty, check whether the company operates in a listed sector.
 
-**How to check:** Look at the company's description, product, or customer base from the JD or a quick web search. A company doesn't need to be named after the industry — a software company whose customers are water utilities counts as a match for "water utilities."
+**How to check:** Look at the company's description, product, or customer base from the JD or a quick web search. A company doesn't need to be named after the industry — e.g., a software company whose customers are hospitals counts as a match for "healthtech", and a B2B SaaS tool sold to financial services firms counts for "fintech".
 
 **If the company matches an industry interest:**
 
@@ -50,7 +50,7 @@ Read `filters.yaml` `industries`. If the list exists and is non-empty, check whe
 2. Nudge the recommendation **up one tier** for borderline cases: Pass → Stretch, Stretch → Moderate. (Don't boost Strong — it's already strong. Don't boost a hard constraint failure — comp/location/seniority still gate.)
 3. Tag the candidate with the matched industry so it appears in the search brief's Industry Match Report
 
-> Example: User has "water utilities" in industries. A role at a company building SCADA systems for water treatment plants gets a positive mention and a tier boost even if the exact title doesn't match a target role type.
+> Example: User has "healthtech" in industries. A role at a company building EHR integrations for hospitals gets a positive mention and a tier boost even if the exact title doesn't match a target role type.
 
 **If `industries` is empty or missing**, skip this step entirely.
 

@@ -111,7 +111,7 @@ Don't be sycophantic about the offer. Be happy for them, then immediately be use
 
 ## Compound requests — config changes alongside status updates
 
-Users often mention configuration changes while updating a role: "decline Cognite but add them to my watch list" or "not interested in this role but my work at Woolpert is relevant to companies like this."
+Users often mention configuration changes while updating a role: "decline {Company} but add them to my watch list" or "not interested in this role but my work at {PriorEmployer} is relevant to companies like this."
 
 **After handling the pipeline action (stage change, decline), scan the rest of the message for:**
 
@@ -148,8 +148,8 @@ If no arguments are provided (user just typed `/jfm:update`), list their active 
    > - StartupX — Head of Engineering
    >
    > **Suggested (new):**
-   > - CoolCo — TPM Lead
-   > - AnotherCo — Partner Engineering Manager
+   > - CoolCo — Engineering Manager
+   > - AnotherCo — Senior Product Manager
    >
    > Just tell me the company (or company + role if there are multiple) and what happened — like "Acme - got a phone screen scheduled" or "CoolCo - decline, too junior"
    >

@@ -99,7 +99,7 @@ The template expects three JSON blobs injected at placeholders:
     "role": "Role Title",
     "url": "https://...",
     "stage": "suggested",
-    "archetype": "tpm_leadership",
+    "archetype": "engineering_leadership",
     "last_updated": "2026-03-27",
     "agent_summary": "### Recommendation\n**Strong** — ...",
     "notes": "Short note",

@@ -140,7 +140,7 @@ evidence:
 preferences:
   comp_floor_usd: {number}
   comp_floor_gbp: {number if targeting UK, otherwise omit}
-  comp_exceptions: "{e.g., civic tech: floor drops to $160K}"
+  comp_exceptions: "{e.g., non-profit: floor drops to $160K, early-stage: equity-heavy}"
   max_travel_pct: {number}
   locations:
     - remote_us
@@ -203,7 +203,7 @@ Wait for answer. Then:
 
 Capture both. Then ask about industries:
 
-> Are there specific industries or sectors you're drawn to? For example: "civic tech", "climate", "healthcare", "industrial data", "water utilities". This helps me find companies in those spaces even if they're not on your dream list yet.
+> Are there specific industries or sectors you're drawn to? For example: "fintech", "developer tools", "climate", "healthtech", "B2B SaaS", or any sector that matches your background. This helps me find companies in those spaces even if they're not on your dream list yet.
 
 If they share industries, save them to `filters.yaml` via `update-filter-list --list industries`. If they skip:
 

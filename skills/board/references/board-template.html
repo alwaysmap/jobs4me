@@ -278,12 +278,13 @@ const VISIBLE_STAGES = ['suggested', 'maybe', 'applied', 'interviewing', 'reject
 // Briefs
 const briefsRaw = document.getElementById('briefs-data').textContent.trim();
 const briefs = briefsRaw && briefsRaw !== '__BRIEFS_DATA__' ? JSON.parse(briefsRaw) : [];
-const ARCHETYPE_LABELS = {
-  tpm_leadership: 'TPM Leadership',
-  professional_services: 'Professional Services',
-  partner_engineering: 'Partner Engineering',
-  startup_operations: 'Startup Operations'
-};
+// Archetype labels are derived from the archetype key (snake_case → Title
+// Case) so any user-defined archetype gets a sensible display label
+// without needing a hardcoded mapping.
+function archetypeLabel(key) {
+  if (!key) return '';
+  return key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+}
 
 let viewFilter = 'active'; // 'active' | 'declined' | 'all'
 const collapsedStages = new Set(['rejected', 'closed']);
@@ -375,8 +376,8 @@ function openDetail(app) {
   if (app.has_prep) docsLinks.push(`<button class="doc-link" onclick="openDoc('${esc(appId)}','prep','${esc(app.company)}')">Interview prep</button>`);
   if (app.has_cover_letter) docsLinks.push(`<button class="doc-link" onclick="openDoc('${esc(appId)}','cover_letter','${esc(app.company)}')">Cover letter</button>`);
   const links = [urlHtml, ...docsLinks].filter(Boolean).join(' &middot; ');
-  const archetypeHtml = app.archetype && ARCHETYPE_LABELS[app.archetype]
-    ? `<div class="dp-archetype">${ARCHETYPE_LABELS[app.archetype]}</div>` : '';
+  const archetypeHtml = app.archetype
+    ? `<div class="dp-archetype">${archetypeLabel(app.archetype)}</div>` : '';
   let updatedHtml = '';
   if (app.last_updated) {
     const days = Math.floor((Date.now() - new Date(app.last_updated + 'T00:00:00')) / 86400000);
@@ -505,8 +506,8 @@ function buildCard(app) {
   if (app.has_prep) cardDocLinks.push(`<button class="doc-link" onclick="event.stopPropagation(); openDoc('${esc(app.id)}','prep','${esc(app.company)}')">Interview prep</button>`);
   if (app.has_cover_letter) cardDocLinks.push(`<button class="doc-link" onclick="event.stopPropagation(); openDoc('${esc(app.id)}','cover_letter','${esc(app.company)}')">Cover letter</button>`);
   const linksHtml = [urlHtml, ...cardDocLinks].filter(Boolean).join(' &middot; ');
-  const archetypeHtml = app.archetype && ARCHETYPE_LABELS[app.archetype]
-    ? `<span class="archetype-tag privacy-blur">${ARCHETYPE_LABELS[app.archetype]}</span>` : '';
+  const archetypeHtml = app.archetype
+    ? `<span class="archetype-tag privacy-blur">${archetypeLabel(app.archetype)}</span>` : '';
 
   let updatedHtml = '';
   if (app.last_updated) {

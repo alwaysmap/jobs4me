@@ -13,7 +13,7 @@ deduplication rules.
 
 - **All `tracker.yaml` / `filters.yaml` mutations go through `tracker.js`** — never write YAML by hand. The script backs up automatically, validates after write, and rebuilds the board.
 - Use block scalar (`|`) for `agent_summary` fields.
-- Quote role titles with special characters: `role: "Sr. Director, TPM"`.
+- Quote role titles with special characters (commas, slashes, periods): `role: "Sr. Director, Engineering"`.
 - Use ISO dates: `2026-03-28`.
 - Em dashes inside `agent_summary` text have no surrounding spaces:
   `word—word`, never `word — word`. (See also `apply/references/voice.md`
@@ -23,9 +23,10 @@ deduplication rules.
 
 ## Deduplication
 
-Dedup on `(company, role)` pairs, not company alone — Toast can
-legitimately have a "Director, TPM" entry and a "Senior TPM" entry
-simultaneously.
+Dedup on `(company, role)` pairs, not company alone — a single company
+can legitimately have multiple distinct roles open at once (e.g.,
+"Director, Engineering" and "Senior Engineering Manager") and both are
+worth tracking.
 
 The `filter-candidates` script does the basic match and surfaces the
 existing entry's `stage`, `decline_reason`, and `last_updated` in
