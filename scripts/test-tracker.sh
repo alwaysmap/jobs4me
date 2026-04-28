@@ -172,6 +172,10 @@ TESTS=(
   test_batch_decline_reason_without_value_rejected
   test_stored_at_not_persisted_to_yaml
   test_stored_at_not_rendered_to_board
+
+  # Unit 6: filter-candidates skip_companies wiring
+  test_filter_candidates_skip_companies_matches
+  test_filter_candidates_skip_companies_legacy_skip_key
 )
 
 # ── Unit 2 scenarios ───────────────────────────────────────────
@@ -723,6 +727,44 @@ test_stored_at_not_rendered_to_board() {
     fail "decline did not produce Kanban/index.html (auto-board-rebuild missing)"
   fi
   assert_file_not_contains "$ws/Kanban/index.html" "stored_at" "stored_at not rendered to board html"
+}
+
+# ── Unit 6 scenarios — filter-candidates skip_companies ────────
+
+# Regression test for the bug where filter-candidates read filters.skip
+# instead of filters.skip_companies, silently passing through every
+# skip-listed company.
+test_filter_candidates_skip_companies_matches() {
+  local ws
+  ws=$(setup_workspace)
+  node "$TRACKER" update-filter-list --dir "$ws" --list skip_companies --add '["Acme Corp"]' >/dev/null 2>&1
+  local out
+  out=$(node "$TRACKER" filter-candidates --dir "$ws" --json '[{"company":"Acme Corp","role":"TPM","url":"https://example.com/a"}]' 2>/dev/null)
+  assert_json_field "$out" "passed" "0" "skip_companies match should not pass"
+  assert_json_field "$out" "filtered" "1" "skip_companies match should land in filtered"
+  assert_json_field "$out" "filtered_detail.0.reason" "skip_list" "filtered with reason=skip_list"
+}
+
+# Backward-compat: legacy filters.yaml using `skip:` (not `skip_companies:`)
+# must still filter. readFilters aliases the key, but filter-candidates must
+# also fall through correctly.
+test_filter_candidates_skip_companies_legacy_skip_key() {
+  local ws
+  ws=$(setup_workspace)
+  # Hand-write a legacy filters.yaml using the old `skip:` key
+  cat > "$ws/filters.yaml" <<'YAML'
+sources: []
+target_companies: []
+skip:
+  - Legacy Co
+watch: []
+industries: []
+decline_patterns: []
+YAML
+  local out
+  out=$(node "$TRACKER" filter-candidates --dir "$ws" --json '[{"company":"Legacy Co","role":"TPM","url":"https://example.com/l"}]' 2>/dev/null)
+  assert_json_field "$out" "passed" "0" "legacy skip key should not pass"
+  assert_json_field "$out" "filtered_detail.0.reason" "skip_list" "legacy skip key filtered as skip_list"
 }
 
 run_tests

@@ -998,7 +998,7 @@ const commands = {
     );
 
     const filters = readFilters(dir);
-    const skipTerms = (filters.skip || []).map(s =>
+    const skipTerms = (filters.skip_companies || filters.skip || []).map(s =>
       (typeof s === 'string' ? s : s.name || '').toLowerCase()
     );
     const declineTerms = (filters.decline_patterns || []).map(p =>
