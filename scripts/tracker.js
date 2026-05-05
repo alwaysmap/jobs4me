@@ -782,14 +782,27 @@ function buildBriefsData(dir, limit = 15) {
   const briefsPath = path.join(dir, 'briefs');
   if (!fs.existsSync(briefsPath)) return [];
 
+  const dateRe = /(\d{4}-\d{2}-\d{2})/;
+
   return fs.readdirSync(briefsPath)
     .filter(f => f.endsWith('.md'))
-    .sort()
-    .reverse()
+    .map(f => {
+      const m = f.match(dateRe);
+      return {
+        filename: f,
+        label: f.replace(/\.md$/, ''),
+        date: m ? m[1] : '',
+      };
+    })
+    .sort((a, b) => {
+      if (a.date !== b.date) return b.date.localeCompare(a.date);
+      return b.filename.localeCompare(a.filename);
+    })
     .slice(0, limit)
-    .map(f => ({
-      date: f.replace(/\.md$/, ''),
-      content: safeReadFile(path.join(briefsPath, f)),
+    .map(({ label, date, filename }) => ({
+      label,
+      date,
+      content: safeReadFile(path.join(briefsPath, filename)),
     }));
 }
 

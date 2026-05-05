@@ -186,6 +186,15 @@
   .briefs-back { background: none; border: none; color: #2563eb; cursor: pointer; font-size: 0.82rem; padding: 0; margin-bottom: 12px; display: none; }
   .briefs-back:hover { text-decoration: underline; }
   .briefs-empty { font-size: 0.85rem; color: #94a3b8; font-style: italic; padding: 20px 0; }
+  .briefs-month { border-bottom: 1px solid #e2e8f0; }
+  .briefs-month[open] { background: #fafafa; }
+  .briefs-month-header { padding: 10px 14px; cursor: pointer; font-weight: 600; font-size: 0.85rem; color: #475569; text-transform: uppercase; letter-spacing: 0.04em; list-style: none; display: flex; justify-content: space-between; align-items: center; user-select: none; }
+  .briefs-month-header::-webkit-details-marker { display: none; }
+  .briefs-month-header::before { content: '▸'; display: inline-block; margin-right: 8px; transition: transform 0.15s; color: #94a3b8; }
+  .briefs-month[open] > .briefs-month-header::before { transform: rotate(90deg); }
+  .briefs-month-count { font-weight: 400; color: #94a3b8; text-transform: none; letter-spacing: 0; }
+  .briefs-month .briefs-item { border-bottom: 1px solid #eef2f6; }
+  .briefs-month > .briefs-item:last-child { border-bottom: none; }
 
   /* Mobile */
   @media (max-width: 640px) {
@@ -772,6 +781,19 @@ function toggleBriefsPanel() {
   }
 }
 
+const BRIEF_MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+function briefMonthLabel(date) {
+  if (!date) return 'Undated';
+  const [y, m] = date.split('-');
+  return `${BRIEF_MONTH_NAMES[parseInt(m, 10) - 1]} ${y}`;
+}
+
+function currentMonthLabel() {
+  const now = new Date();
+  return `${BRIEF_MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}`;
+}
+
 function showBriefsList() {
   const list = document.getElementById('briefs-list');
   const body = document.getElementById('briefs-body');
@@ -786,12 +808,31 @@ function showBriefsList() {
     return;
   }
 
-  list.innerHTML = briefs.map((b, i) =>
-    `<div class="briefs-item" onclick="openBrief(${i})">
-      <span class="brief-date">${esc(b.date)}</span>
-      <span class="brief-arrow">→</span>
-    </div>`
-  ).join('');
+  const groups = new Map();
+  briefs.forEach((b, i) => {
+    const month = briefMonthLabel(b.date);
+    if (!groups.has(month)) groups.set(month, []);
+    groups.get(month).push({ brief: b, idx: i });
+  });
+
+  const currentMonth = currentMonthLabel();
+
+  list.innerHTML = Array.from(groups.entries()).map(([month, items]) => {
+    const open = month === currentMonth ? ' open' : '';
+    const rows = items.map(({ brief, idx }) =>
+      `<div class="briefs-item" onclick="openBrief(${idx})">
+        <span class="brief-date">${esc(brief.label)}</span>
+        <span class="brief-arrow">→</span>
+      </div>`
+    ).join('');
+    return `<details class="briefs-month"${open}>
+      <summary class="briefs-month-header">
+        <span>${esc(month)}</span>
+        <span class="briefs-month-count">${items.length}</span>
+      </summary>
+      ${rows}
+    </details>`;
+  }).join('');
   list.style.display = 'block';
 }
 
@@ -801,7 +842,7 @@ function openBrief(idx) {
   const list = document.getElementById('briefs-list');
   const body = document.getElementById('briefs-body');
   const title = document.getElementById('briefs-title');
-  title.innerHTML = `<button class="briefs-back" style="display:inline;" onclick="showBriefsList()">← Back</button> ${esc(brief.date)}`;
+  title.innerHTML = `<button class="briefs-back" style="display:inline;" onclick="showBriefsList()">← Back</button> ${esc(brief.label)}`;
   list.style.display = 'none';
   body.innerHTML = marked.parse(brief.content);
   body.classList.add('privacy-blur');
