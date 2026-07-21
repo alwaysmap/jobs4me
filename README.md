@@ -1,6 +1,6 @@
 # Jobs For Me
 
-An AI-powered job search agent that runs on your Claude Pro or Max subscription. It learns what roles you'd actually take, finds them, assesses fit, and prepares you for interviews.
+An AI-powered job search agent that runs on your paid Claude plan. It learns what roles you'd actually take, finds them, assesses fit, and prepares you for interviews.
 
 ## What It Does
 
@@ -12,11 +12,14 @@ An AI-powered job search agent that runs on your Claude Pro or Max subscription.
 
 ## Quick Start
 
-1. Upload `jfm.zip` through the Cowork plugin settings (Customize → Personal plugins → +)
-2. Start a new Cowork session and select a folder for your job search data
-3. Type `/jfm:setup` and follow the guided conversation
+1. In the Claude app sidebar, open **Customize → Plugins → Add marketplace** and enter `alwaysmap/alwaysmap-marketplace`
+2. Find **Jobs for Me** in the listing and click **Install**
+3. In the message box, select **Cowork**, then start a task and pick a folder for your job search data
+4. Type `/jfm:setup` — or just say "set up my job search" — and follow the guided conversation
 
 That's it. No dependencies to install, no API keys to configure — the plugin runs entirely on your Claude subscription inside Cowork's VM.
+
+> **Plugins run in Cowork, not Chat.** If you don't see the `/jfm:` commands, check that Cowork is selected in the message box.
 
 Setup gives you two options: a **full setup** (~10 minutes) that walks through your background, preferences, role types, target companies, and search sources, or a **quick start** (~3 minutes) where you just share your resume and describe the roles you want. Either way, everything is adjustable later with `/jfm:tweak`.
 
@@ -24,7 +27,10 @@ After setup, the first `/jfm:search` run takes around **20 minutes** — it's ch
 
 ## Commands
 
-Every command is namespaced under the `jfm` plugin. You can also describe what you want in natural language ("decline this role", "what should I do next?") and the agent picks the right skill — the slash commands are just an explicit entry point.
+There are two ways to invoke everything, and they do the same thing:
+
+- **Just say what you want** — "decline this role", "what should I do next?", "find me new roles" — and the matching skill fires automatically.
+- **Use a `/jfm:` slash command** — every command below is namespaced under the `jfm` plugin. This is the explicit shortcut when you already know which one you want.
 
 | Command | What It Does |
 |---------|-------------|
@@ -43,12 +49,13 @@ Everything is adjustable after setup. Missed something? Run `/jfm:setup` again �
 
 Set up a scheduled task so the agent searches for you automatically:
 
-1. Open the scheduled tasks menu (clock icon in the sidebar)
-2. Create a new task, name it something like "daily-search"
-3. Pick Jobs for Me → `/jfm:search` as the command
-4. Set your frequency — daily or twice a day works well
+1. Click **Scheduled** in the Claude app sidebar, then **New task**
+2. Choose **Create with Claude** and describe what you want ("run my job search every morning") — Claude asks a few multiple-choice questions and sets it up
+3. Or choose **Set up manually** and fill in the task name, the prompt (`/jfm:search`), approval mode, and frequency — daily or weekdays works well
 
 New roles show up on your board without you lifting a finger. Review them when it's convenient, decline the bad ones, and the agent learns from every decision.
+
+> **Scheduled searches need your machine.** Cowork scheduled tasks normally run remotely, but a task that needs local files or apps only runs locally — and Jobs for Me keeps its data in a local folder and drives your browser to verify postings. Keep the desktop app open, with Chrome available, at the scheduled time. Cowork's scheduled tasks also can't be pinned to a folder on your computer, so confirm the task picks up your job search folder before relying on it.
 
 ## Your Data
 
@@ -68,7 +75,9 @@ You can read and edit any of these files directly. They're plain YAML and markdo
 
 ## Requirements
 
-- Claude Desktop with Cowork mode (Pro or Max subscription)
+- **A paid Claude plan** — Pro, Max, Team, or Enterprise
+- **The Claude desktop app** (macOS or Windows). Cowork also runs on web and mobile, but Jobs for Me needs local file access and your browser, so the desktop app is the practical requirement.
+- **Cowork, not Chat.** Plugins are available in Cowork and Claude Code; they aren't used in Chat. Chat and Cowork now share one app home — Cowork is a mode you select in the message box before describing your task, and you switch back by selecting Chat.
 
 ## How It Works
 

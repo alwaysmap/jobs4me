@@ -6,7 +6,7 @@ weight: 3
 
 ## Commands
 
-Every command is namespaced under the `jfm` plugin — type `/jfm:` in Cowork to see them all. Each command runs the matching skill; you can also trigger the same skills with natural language ("decline this role", "what should I do next?") and the agent will pick the right one.
+Every command is namespaced under the `jfm` plugin — type `/jfm:` in a Cowork task to see them all. Each `/jfm:` command triggers a skill, and those same skills also fire when you describe what you want in plain language ("decline this role", "what should I do next?"). Use whichever you prefer — they do the same thing.
 
 | Command | What it does |
 |---------|-------------|
@@ -41,13 +41,13 @@ The first search takes about 20 minutes. After that, searches are faster because
 
 ### Automate it
 
-Schedule `/jfm:search` to run automatically:
+Cowork can run `/jfm:search` on a schedule:
 
-1. Open the scheduled tasks menu (clock icon in the sidebar)
-2. Create a new task, pick the `/jfm:search` command
-3. Set your frequency — daily works well
+1. Click **Scheduled** in the Claude app sidebar, then **New task**
+2. Choose **Create with Claude** and describe what you want ("run my job search every morning") — Claude asks a few multiple-choice questions and sets it up
+3. Or choose **Set up manually** and fill in the task name, the prompt (`/jfm:search`), approval mode, and frequency. Daily works well.
 
-New roles appear on your board without you lifting a finger.
+Scheduled tasks normally run remotely, so they fire on time even when your computer is asleep — but a task that needs local files or apps only runs locally. That's the caveat for Jobs For Me specifically: because a search reads and writes files in your local folder — and can use Chrome to read career pages — keep the **Claude desktop app running** (and Chrome, if you use it) so a scheduled search has everything it needs to land results on your board. Cowork's scheduled tasks also can't be pinned to a folder on your computer, so confirm the task picks up your job search folder before relying on it. See [Chrome Browser Setup](/guides/chrome-setup/).
 
 ## Reviewing and triaging
 

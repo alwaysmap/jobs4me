@@ -20,7 +20,7 @@ a direct fetch typically returns 20–30 director-level roles when browsed via C
 
 - **Google Chrome** — [download here](https://www.google.com/chrome/)
 - **Claude for Chrome extension** — install from the [Chrome Web Store](https://chromewebstore.google.com/) (search "Claude for Chrome")
-- **Cowork** — the Claude desktop app you already have
+- **The Claude desktop app** — Jobs For Me runs in Cowork, and driving your browser needs the desktop app running
 
 Chrome is an *enhancement*, not a requirement. If Chrome isn't available during a search, JFM
 automatically falls back to Google `site:` searches, which index the rendered versions of JS career
@@ -38,7 +38,7 @@ pages.
 
 ### 2. Launch Chrome once and confirm the connection
 
-Open Cowork and run `/jfm:search` or ask "check if Chrome is connected." JFM calls the extension
+In a Cowork task, run `/jfm:search` or ask "check if Chrome is connected." JFM calls the extension
 internally — if it responds, you're ready. If not, make sure Chrome is open and the extension icon
 is visible in the toolbar.
 
