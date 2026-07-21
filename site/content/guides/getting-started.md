@@ -6,12 +6,14 @@ weight: 2
 
 ## Setup
 
-Type `/jfm:setup` in your Cowork session. You'll be offered two paths:
+Jobs For Me runs in **Cowork** — Claude's mode for handing it a task to work on. In the message box, select **Cowork**, then type `/jfm:setup` to begin. You'll be offered two paths:
 
 - **Full setup** (~10 minutes) — a conversational interview covering your background, preferences, role types, target companies, and search sources
 - **Quick start** (~3 minutes) — just share your resume and describe the kinds of roles you want
 
 Either way, the agent will show you where you are at every step ("Step 2 of 5: Career evidence") and everything is adjustable later with `/jfm:tweak`.
+
+> **Two ways to drive it.** Every action has a `/jfm:` slash command — type `/jfm:` in a Cowork task to see the full list. You can also just say what you want in plain language ("set me up", "find me some jobs", "decline this one") and the agent picks the right skill. The slash commands are the explicit shortcut; natural language works just as well.
 
 ### What gets created
 

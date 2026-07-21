@@ -13,7 +13,7 @@ Jobs For Me is a Claude plugin that runs your job search as a persistent agent. 
 
 ## How it works
 
-The plugin teaches Claude how to be a job search agent through **skills** (domain knowledge) and **commands** (actions). Your data lives as plain YAML and markdown files in a folder you control. No database, no server, no API keys — just Claude and your files.
+The plugin teaches Claude how to be a job search agent through **skills** — reusable instructions Claude loads when they're relevant to what you're doing. Each skill also has a `/jfm:` slash command as an explicit shortcut, so you can either say what you want in plain language or run the command directly. Your data lives as plain YAML and markdown files in a folder you control. No database, no server, no API keys — just Claude and your files.
 
 ## Open source
 

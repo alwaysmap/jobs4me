@@ -1,50 +1,41 @@
 ---
 title: Installation
-summary: Install the plugin in Claude Desktop or Claude Code.
+summary: Install the plugin in the Claude app (Cowork) or Claude Code.
 weight: 1
 ---
 
 ## Requirements
 
-- Claude Desktop or Claude Code (CLI)
-- A Claude Pro or Max subscription
+- **The Claude desktop app** (macOS or Windows). Jobs For Me reads and writes plain files in a folder on your computer, and can drive your browser to read career pages — both of those need the desktop app, so that's its home. [Download it here](https://claude.ai/download).
+- **A paid Claude plan** — Pro or Max.
 
-## Desktop App Installation
+> **Chat vs. Cowork — start here.** Claude's chat and its autonomous-task mode now live in one place. In the message box you'll see a selector: **Cowork** hands Claude a task to work on (this is where Jobs For Me lives), while **Chat** is a regular back-and-forth. **Plugins only run in Cowork, not Chat.** Everything below assumes you're in Cowork.
 
-First, [install the Claude desktop app](https://claude.ai/download) if you haven't already.
+## Install in the Claude app
 
-1. Go to **Customize > Plugins > Personal > + > Add marketplace**
-2. Paste: `alwaysmap/alwaysmap-marketplace`
-3. **Quit Claude Desktop fully** — press **⌘Q**, or right-click the dock icon and choose **Quit**. Closing the window is not enough; the marketplace only syncs on a real quit-and-relaunch.
-4. **Relaunch Claude Desktop.** Give it a few seconds for the first sync to finish.
-5. Go to **Customize > Plugins > Personal**, find **Jobs for Me**, and click **+** to install it.
-6. Start a new Cowork session and select a folder for your job search data.
+1. [Install the Claude desktop app](https://claude.ai/download) and sign in, if you haven't already.
+2. In the sidebar, open **Customize → Plugins**.
+3. Select **Add marketplace** and enter: `alwaysmap/alwaysmap-marketplace`
+4. Find **Jobs for Me** in the list, select it, and click **Install**.
+5. In the message box, select **Cowork**, then point it at a folder on your computer for your job search data.
 
-See [Managing plugins](https://docs.anthropic.com/en/docs/claude-ai/plugins#managing-plugins) in the Claude docs for more details.
+That's it — no dependencies to install, no API keys, no config files to edit.
 
-> **Desktop and Claude Code keep entirely separate plugin worlds.** Each one has its own marketplaces, its own cache, and its own installed plugins. Adding the marketplace in Desktop does nothing for Claude Code, and vice versa. If you use both, install in both.
+See [Install plugins](https://claude.com/docs/cowork/guide/plugins) in the Claude docs for the full reference.
 
-## Claude Code Installation
+## Install in Claude Code
 
-If you have [Claude Code](https://docs.anthropic.com/en/docs/claude-code) installed, you can install the plugin directly from the command line.
-
-**Add the marketplace and install:**
+Prefer the command line? If you have [Claude Code](https://docs.claude.com/en/docs/claude-code) installed, you can install the plugin from a terminal:
 
 ```bash
 # Add the alwaysmap marketplace
 claude plugin marketplace add alwaysmap/alwaysmap-marketplace
 
-# Update marketplace listings
-claude plugin marketplace update
-
-# List available plugins
-claude plugin marketplace list
-
 # Install the plugin
 claude plugin install jfm@alwaysmap
 ```
 
-**Verify the installation:**
+Verify the installation:
 
 ```bash
 claude plugin list
@@ -52,11 +43,11 @@ claude plugin list
 
 Start a new Claude Code session and select a folder for your job search data.
 
-Either way — no dependencies to install, no API keys, no configuration files to edit.
+> **The Claude app and Claude Code keep separate plugin installs.** Each has its own marketplaces and its own installed plugins. Adding the marketplace in the app does nothing for Claude Code, and vice versa. If you use both, install in both.
 
 ## Choose your data folder
 
-When you start a Cowork session, select a folder where your job search data will live. Good options:
+When you start a Cowork task, point it at a folder where your job search data will live. Good options:
 
 - A folder in [Google Drive](https://www.google.com/drive/download/), [Dropbox](https://www.dropbox.com/install), or **iCloud** (built into macOS) — your data syncs and backs up automatically
 - Any local folder if you prefer to manage backups yourself
@@ -82,20 +73,17 @@ You can:
 tailscale serve --bg /path/to/your-folder/Kanban/
 ```
 
-This serves the board over HTTPS on your tailnet, accessible from any device. The `--bg` flag makes it persist across reboots.
+This serves the board over HTTPS on your tailnet, accessible from any device. The `--bg` flag makes it persist across reboots. For a fuller setup with Caddy, see [Access Your Board From Anywhere](/guides/remote-access/).
 
 ## Updating
 
-### Desktop App
+### Claude app
 
-Claude Desktop refreshes its marketplace listings every time it launches. To pick up a new version:
+1. Open **Customize → Plugins**.
+2. On the **alwaysmap** marketplace, click **Update** to pull the latest listings.
+3. If a newer version of **Jobs for Me** is available, an update control appears next to it — click it.
 
-1. **Quit Claude Desktop fully** (⌘Q — closing the window is not enough).
-2. **Relaunch.** Wait a few seconds for the sync to finish.
-3. Go to **Customize > Plugins > Personal**. The version shown next to **Jobs for Me** will be the latest available.
-4. If a new version is detected, Desktop will show an update button next to the plugin — click it.
-
-If the version still looks stale after a relaunch, see [Troubleshooting](#troubleshooting) below.
+Your data folder is untouched by updates — only the plugin code changes.
 
 ### Claude Code
 
@@ -109,37 +97,29 @@ claude plugin update jfm@alwaysmap
 
 Restart Claude Code to apply the update.
 
-> **Reminder:** Desktop and Claude Code update independently. Updating in one does nothing for the other. If you use both, run the update in both.
-
-Your data folder is untouched by plugin updates — only the plugin code changes.
+> **Reminder:** The Claude app and Claude Code update independently. Updating in one does nothing for the other. If you use both, update in both.
 
 ## Troubleshooting
 
-### "I refreshed the marketplace and it says I'm on the latest version, but nothing happened."
+### "I refreshed the marketplace, but nothing changed."
 
-Refreshing a marketplace updates *listings* — what versions are available — not the plugin itself. Installing and updating are separate steps you have to take explicitly:
+Refreshing a marketplace updates the *listings* — which versions exist — not the plugin that's installed. They're two separate steps:
 
-- **Desktop:** click the **+** (install) or update button next to **Jobs for Me** in Customize > Plugins > Personal.
-- **Claude Code:** run `claude plugin install jfm@alwaysmap` to install or `claude plugin update jfm@alwaysmap` to update.
+- **Claude app:** in **Customize → Plugins**, click **Update** on the marketplace, then click the update control next to **Jobs for Me**.
+- **Claude Code:** run `claude plugin update jfm@alwaysmap`.
 
-### "I added the marketplace but Jobs for Me isn't showing up."
+### "I installed it, but Jobs for Me isn't doing anything."
 
-Check which surface you added it in. **Desktop and Claude Code don't share marketplaces or installs** — adding the marketplace in Claude Code does *not* make it appear in Desktop, and vice versa. Add it again in whichever app you're trying to use the plugin in.
+Two common causes:
 
-### Desktop still shows an old version after relaunching.
+- **Wrong mode.** Plugins run in **Cowork**, not Chat. Make sure **Cowork** is selected in the message box before you type `/jfm:setup`.
+- **Wrong surface.** The Claude app and Claude Code don't share installs. Install it again in whichever one you're using.
 
-Force a clean re-sync:
-
-1. Quit Claude Desktop fully (⌘Q).
-2. Relaunch.
-3. Customize > Plugins > Personal — find **alwaysmap** in the marketplace list and **remove** it.
-4. Re-add it: **+** > Add marketplace > paste `alwaysmap/alwaysmap-marketplace`.
-5. Quit and relaunch one more time.
-6. Find **Jobs for Me** and click **+** to install.
+If the plugin still doesn't appear in the list, remove and re-add the marketplace under **Customize → Plugins**, then click **Update**.
 
 ### Claude Code says `Permission denied (publickey)` when installing.
 
-You're hitting a GitHub SSH auth issue while cloning the plugin. The plugin source is configured for HTTPS, so this should not happen with the current marketplace — if it does, make sure your marketplace listing is fresh:
+You're hitting a GitHub SSH auth issue while cloning the plugin. The marketplace is configured for HTTPS, so this shouldn't happen — if it does, refresh your marketplace listing:
 
 ```bash
 claude plugin marketplace remove alwaysmap
