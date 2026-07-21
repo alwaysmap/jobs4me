@@ -16,6 +16,8 @@ When the user asks for help, present a concise overview of all commands grouped 
 
 > **Jobs for Me** — an AI-powered job search agent that finds roles, assesses fit, and learns what you actually want.
 >
+> **Two ways to run anything:** just say what you want ("find me new roles", "decline this one") and the right skill fires automatically — or use a `/jfm:` command below as an explicit shortcut. Same result either way.
+>
 > **Getting started:**
 > - `/jfm:setup` — Set up your profile, role types, and search sources. Run once to get started.
 >

@@ -292,7 +292,7 @@ After the first run (or if the user defers the search), **always show this guida
 >
 > Run `/jfm:setup` again anytime — it'll check what's in place and help you fill gaps (same as `/jfm:tweak`).
 >
-> **Automate it:** Schedule `/jfm:search` to run daily using the scheduled tasks menu (clock icon). New roles show up on your board without you lifting a finger.
+> **Automate it:** Click **Scheduled** in the sidebar → **New task** → **Create with Claude**, and ask for `/jfm:search` daily. New roles show up on your board without you lifting a finger. Keep the desktop app open at the scheduled time — your job search data is in a local folder, so the run needs your machine.
 
 ---
 
